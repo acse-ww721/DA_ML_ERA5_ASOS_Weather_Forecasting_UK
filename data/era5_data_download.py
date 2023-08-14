@@ -3,8 +3,7 @@ import threading
 import time
 from tqdm import tqdm
 
-dataset1 = 'reanalysis-era5-land'
-# dataset2 =''
+dataset1 = 'reanalysis-era5-single-levels'
 data_year = [  # the target years
     '2022',
     '2023',
@@ -50,11 +49,9 @@ data_time = [  # the target times_UTC
     '23:00',
 ]
 variable_list_1 = [
-    '10m_u_component_of_wind',
-    '10m_v_component_of_wind',
-    '2m_dewpoint_temperature',
-    '2m_temperature',
-    'skin_temperature',
+    '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature',
+            '2m_temperature', 'instantaneous_10m_wind_gust', 'mean_sea_level_pressure',
+            'skin_temperature', 'surface_pressure', 'total_precipitation',
 ]
 
 download_times = {}  # Dictionary to store download times for each task
@@ -93,16 +90,18 @@ def era5_get_data(c, dataset, variable_list, year, month):
     # variable_list: the target variable
     try:
         start_time = time.time()  # Record start time
-        filename = f'download_era5_land_{year}_{month}.netcdf.zip'
+        filename = f'era5_single_level_{year}_{month}.nc'
         c.retrieve(
             dataset,
             {
+                'product_type': 'reanalysis',
+                'format': 'netcdf',
                 'variable': variable_list,
                 'year': year,
                 'month': month,
                 'day': days_check(year, month),
                 'time': data_time,
-                'format': 'netcdf.zip',
+                # 'format': 'netcdf.zip',
                 'area': [
                     61,
                     -8,
