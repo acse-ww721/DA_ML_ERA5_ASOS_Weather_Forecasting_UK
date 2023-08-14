@@ -137,7 +137,7 @@ def thread_function(year, month):
 
 threads = []
 
-for i in tqdm(data_year):
+for i in data_year:
     for j in tqdm(data_month):
         thread = threading.Thread(target=thread_function, args=(i, j))
         threads.append(thread)
