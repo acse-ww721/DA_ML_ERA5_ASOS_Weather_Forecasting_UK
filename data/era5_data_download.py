@@ -49,7 +49,7 @@ data_time = [  # the target times_UTC
     '22:00',
     '23:00',
 ]
-variable_list = [
+variable_list_1 = [
     '10m_u_component_of_wind',
     '10m_v_component_of_wind',
     '2m_dewpoint_temperature',
@@ -63,10 +63,12 @@ c = cdsapi.Client()
 
 
 def is_leap_year(year):
+    year = int(year)  # Convert the string to integer
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
 
 
 def days_check(year, month):
+    year = int(year)  # Convert the string to integer
     days_by_month = {
         "01": 31,  # January
         "02": 29 if is_leap_year(year) else 28,  # February
@@ -96,13 +98,13 @@ def era5_get_data(c, dataset, variable_list, year, month):
             dataset,
             {
                 'variable': variable_list,
-                'year': i,
-                'month': j,
+                'year': year,
+                'month': month,
                 'day': days_check(year, month),
                 'time': data_time,
                 'format': 'netcdf.zip',
                 'area': [
-                    61.2,
+                    61,
                     -8,
                     50,
                     2,
@@ -116,15 +118,16 @@ def era5_get_data(c, dataset, variable_list, year, month):
 
         print(f'{filename} done!')
         print(f'Download time: {download_time:.3f} s')
+
     except Exception as e:
-        print(f'Error downloading {filename}: {e}')
+        print(f'Error downloading {filename}: {e}\n')
 
 
 # Mutiple threads module for accelerating
 
 
 def thread_function(year, month):
-    era5_get_data(c, dataset1, variable_list, year, month)
+    era5_get_data(c, dataset1, variable_list_1, year, month)
 
 
 threads = []
@@ -140,4 +143,4 @@ for thread in threads:
 
 # Calculate and print total download times
 total_download_time = sum(download_times.values())
-print(f'Total download time: {total_download_time:.2f} seconds')
+print(f'Total download time: {total_download_time:.2f} seconds\n')
