@@ -49,9 +49,15 @@ data_time = [  # the target times_UTC
     '23:00',
 ]
 variable_list_1 = [
-    '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature',
-            '2m_temperature', 'instantaneous_10m_wind_gust', 'mean_sea_level_pressure',
-            'skin_temperature', 'surface_pressure', 'total_precipitation',
+    '10m_u_component_of_wind',
+    '10m_v_component_of_wind',
+    '2m_dewpoint_temperature',
+    '2m_temperature',
+    'instantaneous_10m_wind_gust',
+    'mean_sea_level_pressure',
+    'skin_temperature',
+    'surface_pressure',
+    'total_precipitation',
 ]
 
 download_times = {}  # Dictionary to store download times for each task
