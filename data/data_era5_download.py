@@ -89,7 +89,6 @@ def days_check(year, month):
 
     return [str(day).zfill(2) for day in range(1, days_by_month.get(month, 0) + 1)]
 
-
 def era5_get_data(c, dataset, variable_list, year, month):
     # c: api_server
     # dataset: target dataset
@@ -128,7 +127,7 @@ def era5_get_data(c, dataset, variable_list, year, month):
         print(f'Error downloading {filename}: {e}\n')
 
 
-# Mutiple threads module for accelerating
+# Multiple threads module for accelerating
 
 
 def thread_function(year, month):
