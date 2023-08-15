@@ -148,3 +148,6 @@ for thread in threads:
 # Calculate and print total download times
 total_download_time = sum(download_times.values())
 print(f'Total download time: {total_download_time:.2f} seconds\n')
+
+
+# if_main upadte
