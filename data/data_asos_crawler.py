@@ -182,6 +182,7 @@ def save_data(url_site, country, station, startts, endts):
     df.to_csv(output_filename, index=False, encoding="utf-8")
     print(f'{output_filename} done!')
 
+
 def download_and_save_data(url_site, country, station, startts, endts):
     start_time = time.time()  # Record start time
     data = download_data(url_site)
@@ -199,6 +200,7 @@ def download_and_save_data_thread(args):
     url_site, country, station_id, startts, endts = args
     download_and_save_data(url_site, country, station_id, startts, endts)
 
+
 # UK example
 country = [
     "GB",
@@ -209,8 +211,13 @@ end_date = datetime.datetime(2023, 8, 2)
 
 gb_df = get_all_station_by_network(country)
 url_site_list, id_list = get_data_url(gb_df, start_date, end_date)
-for url_site, station_id in tqdm(zip(url_site_list, id_list)):
-    download_and_save_data(url_site, "GB", station_id, start_date, end_date)
+args_list = [
+    (url_site, "GB", station_id, start_date, end_date)
+    for url_site, station_id in zip(url_site_list, id_list)
+]
+
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    executor.map(download_and_save_data_thread, args_list)
 
 
 # test url:
