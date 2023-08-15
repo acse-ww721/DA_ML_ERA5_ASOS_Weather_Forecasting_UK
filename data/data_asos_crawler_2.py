@@ -116,7 +116,6 @@ def get_all_station_by_network(country_list):
                 # "Properties": properties
             }
             data.append(row)
-            data.append(row)
 
         # Transfer the list to Pandas DataFrame
         df = pd.DataFrame(data)
@@ -187,6 +186,8 @@ def save_data(url_site, country, station, startts, endts):
 country = [
     "GB",
 ]
+url_site_list = []
+id_list = []
 start_date = datetime.datetime(2022, 1, 1)
 end_date = datetime.datetime(2023, 8, 2)
 
