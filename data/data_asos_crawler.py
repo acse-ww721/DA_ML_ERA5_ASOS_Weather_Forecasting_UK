@@ -2,10 +2,11 @@
 # The site use GB to denote UK_ASOS
 # the eu_member_codes has 28 variables: UK + EU
 
+import time
+import datetime
 import requests
 import pandas as pd
-import datetime
-import time
+import concurrent.futures
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
@@ -181,24 +182,35 @@ def save_data(url_site, country, station, startts, endts):
     df.to_csv(output_filename, index=False, encoding="utf-8")
     print(f'{output_filename} done!')
 
+def download_and_save_data(url_site, country, station, startts, endts):
+    start_time = time.time()  # Record start time
+    data = download_data(url_site)
+    end_time = time.time()  # Record end time
+    download_time = end_time - start_time
+
+    if data:
+        save_data(data, country, station, startts, endts)
+        print(f'{station} - Download time: {download_time:.3f} s')
+    else:
+        print(f'{station} - Download failed')
+
+
+def download_and_save_data_thread(args):
+    url_site, country, station_id, startts, endts = args
+    download_and_save_data(url_site, country, station_id, startts, endts)
 
 # UK example
 country = [
     "GB",
 ]
-url_site_list = []
-id_list = []
+
 start_date = datetime.datetime(2022, 1, 1)
 end_date = datetime.datetime(2023, 8, 2)
 
 gb_df = get_all_station_by_network(country)
 url_site_list, id_list = get_data_url(gb_df, start_date, end_date)
 for url_site, station_id in tqdm(zip(url_site_list, id_list)):
-    start_time = time.time()  # Record start time
-    save_data(url_site, "GB", station_id, start_date, end_date)
-    end_time = time.time()  # Record end time
-    download_time = end_time - start_time
-    print(f'Download time: {download_time:.3f} s')
+    download_and_save_data(url_site, "GB", station_id, start_date, end_date)
 
 
 # test url:
