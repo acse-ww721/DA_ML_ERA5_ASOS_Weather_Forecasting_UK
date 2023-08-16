@@ -91,6 +91,7 @@ def get_all_station_by_network(country_list):
         url_station_geojson = (
             f"https://mesonet.agron.iastate.edu/geojson/network/{i}__ASOS.geojson"
         )
+        output_filename = f"{i}__asos_station_network.csv"
 
         # Get GeoJSON data
         response = requests.get(url_station_geojson)
@@ -120,6 +121,8 @@ def get_all_station_by_network(country_list):
 
         # Transfer the list to Pandas DataFrame
         df = pd.DataFrame(data)
+        df.to_csv(output_filename, index=False, encoding="utf-8")
+
     return df
 
 
