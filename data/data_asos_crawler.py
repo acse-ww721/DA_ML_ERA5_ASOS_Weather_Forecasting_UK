@@ -2,6 +2,7 @@
 # The site use GB to denote UK_ASOS
 # the eu_member_codes has 28 variables: UK + EU
 
+import os
 import time
 import datetime
 import requests
@@ -202,6 +203,15 @@ def download_and_save_data(url_site, country, station, startts, endts):
 def download_and_save_data_thread(args):
     url_site, country, station_id, startts, endts = args
     download_and_save_data(url_site, country, station_id, startts, endts)
+
+
+def create_folder(c):
+    folder_name = f"{c}_ASOS_DATA"
+    try:
+        os.mkdir(folder_name)
+        print(f"Folder '{folder_name}' created successfully.")
+    except FileExistsError:
+        print(f"Folder '{folder_name}' already exists.")
 
 
 # UK example
