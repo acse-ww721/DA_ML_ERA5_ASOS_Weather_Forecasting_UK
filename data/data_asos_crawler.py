@@ -50,6 +50,20 @@ endts = datetime.datetime(2023, 8, 2)
 MAX_ATTEMPTS = 6
 
 
+def create_folder(c):
+    current_directory = os.path.dirname(__file__)
+    folder_name = f"{c}_ASOS_DATA"
+    folder_path = os.path.join(current_directory, folder_name)
+
+    try:
+        os.mkdir(folder_path)
+        print(f"Folder '{folder_path}' created successfully.")
+    except FileExistsError:
+        print(f"Folder '{folder_path}' already exists.")
+
+    return folder_path
+
+
 def get_all_network():
     url = "https://mesonet.agron.iastate.edu/request/download.phtml?network=FR__ASOS"
     response = requests.get(url)
@@ -92,7 +106,9 @@ def get_all_station_by_network(country_list):
         url_station_geojson = (
             f"https://mesonet.agron.iastate.edu/geojson/network/{i}__ASOS.geojson"
         )
+        output_directory = create_folder(i)
         output_filename = f"{i}__asos_station_network.csv"
+        output_filepath = os.path.join(output_directory, output_filename)
 
         # Get GeoJSON data
         response = requests.get(url_station_geojson)
@@ -122,7 +138,7 @@ def get_all_station_by_network(country_list):
 
         # Transfer the list to Pandas DataFrame
         df = pd.DataFrame(data)
-        df.to_csv(output_filename, index=False, encoding="utf-8")
+        df.to_csv(output_filepath, index=False, encoding="utf-8")
 
     return df
 
@@ -163,7 +179,9 @@ def download_data(url_site):
 def save_data(url_site, country, station, startts, endts):
     data = download_data(url_site)
     # output_filename = f"{country}_{startts:%Y%m%d%H%M}_{endts:%Y%m%d%H%M}.csv"
+    output_directory = create_folder(country)
     output_filename = f"{country}_{station}_{startts:%Y%m%d}_{endts:%Y%m%d}.csv"
+    output_filepath = os.path.join(output_directory, output_filename)
     # Split the data into lines
     lines = data.split("\n")
 
@@ -183,7 +201,7 @@ def save_data(url_site, country, station, startts, endts):
     df = pd.DataFrame(data_rows, columns=column_names)
 
     # Save the DataFrame to a CSV file
-    df.to_csv(output_filename, index=False, encoding="utf-8")
+    df.to_csv(output_filepath, index=False, encoding="utf-8")
     print(f'{output_filename} done!')
 
 
@@ -203,15 +221,6 @@ def download_and_save_data(url_site, country, station, startts, endts):
 def download_and_save_data_thread(args):
     url_site, country, station_id, startts, endts = args
     download_and_save_data(url_site, country, station_id, startts, endts)
-
-
-def create_folder(c):
-    folder_name = f"{c}_ASOS_DATA"
-    try:
-        os.mkdir(folder_name)
-        print(f"Folder '{folder_name}' created successfully.")
-    except FileExistsError:
-        print(f"Folder '{folder_name}' already exists.")
 
 
 # UK example
