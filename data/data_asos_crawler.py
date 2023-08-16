@@ -50,8 +50,18 @@ endts = datetime.datetime(2023, 8, 2)
 MAX_ATTEMPTS = 6
 
 
+def get_current_directory():
+    if "__file__" in globals():
+        # Running in a Python file
+        return os.path.abspath(os.path.dirname(__file__))
+    else:
+        # Running in a Jupyter Notebook
+        return os.path.abspath(os.path.dirname(""))
+
+
+
 def create_folder(c):
-    current_directory = os.path.dirname(__file__)
+    current_directory = get_current_directory()
     folder_name = f"{c}_ASOS_DATA"
     folder_path = os.path.join(current_directory, folder_name)
 
