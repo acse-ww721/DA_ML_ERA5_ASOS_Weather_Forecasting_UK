@@ -9,7 +9,9 @@ import requests
 import pandas as pd
 import concurrent.futures
 from bs4 import BeautifulSoup
-from tqdm import tqdm
+
+# from tqdm import tqdm
+from utils import folder_utils
 
 eu_member_codes = [
     'AT',
@@ -50,28 +52,27 @@ endts = datetime.datetime(2023, 8, 2)
 MAX_ATTEMPTS = 6
 
 
-def get_current_directory():
-    if "__file__" in globals():
-        # Running in a Python file
-        return os.path.abspath(os.path.dirname(__file__))
-    else:
-        # Running in a Jupyter Notebook
-        return os.path.abspath(os.path.dirname(""))
+# def get_current_directory():
+#     if "__file__" in globals():
+#         # Running in a Python file
+#         return os.path.abspath(os.path.dirname(__file__))
+#     else:
+#         # Running in a Jupyter Notebook
+#         return os.path.abspath(os.path.dirname(""))
 
 
-
-def create_folder(c):
-    current_directory = get_current_directory()
-    folder_name = f"{c}_ASOS_DATA"
-    folder_path = os.path.join(current_directory, folder_name)
-
-    try:
-        os.mkdir(folder_path)
-        print(f"Folder '{folder_path}' created successfully.")
-    except FileExistsError:
-        print(f"Folder '{folder_path}' already exists.")
-
-    return folder_path
+# def create_folder(c):
+#     current_directory = get_current_directory()
+#     folder_name = f"{c}_ASOS_DATA"
+#     folder_path = os.path.join(current_directory, folder_name)
+#
+#     try:
+#         os.mkdir(folder_path)
+#         print(f"Folder '{folder_path}' created successfully.")
+#     except FileExistsError:
+#         print(f"Folder '{folder_path}' already exists.")
+#
+#     return folder_path
 
 
 def get_all_network():
@@ -116,7 +117,9 @@ def get_all_station_by_network(country_list):
         url_station_geojson = (
             f"https://mesonet.agron.iastate.edu/geojson/network/{i}__ASOS.geojson"
         )
-        output_directory = create_folder(i)
+        output_directory = folder_utils.create_folder(
+            i, data_folder, data_category, output_folder
+        )
         output_filename = f"{i}__asos_station_network.csv"
         output_filepath = os.path.join(output_directory, output_filename)
 
@@ -189,7 +192,9 @@ def download_data(url_site):
 def save_data(url_site, country, station, startts, endts):
     data = download_data(url_site)
     # output_filename = f"{country}_{startts:%Y%m%d%H%M}_{endts:%Y%m%d%H%M}.csv"
-    output_directory = create_folder(country)
+    output_directory = folder_utils.create_folder(
+        country, data_folder, data_category, output_folder
+    )
     output_filename = f"{country}_{station}_{startts:%Y%m%d}_{endts:%Y%m%d}.csv"
     output_filepath = os.path.join(output_directory, output_filename)
     # Split the data into lines
@@ -237,6 +242,10 @@ def download_and_save_data_thread(args):
 country = [
     "GB",
 ]
+
+data_folder = "data"
+data_category = "raw_data"
+output_folder = "ASOS_DATA"
 
 start_date = datetime.datetime(2022, 1, 1)
 end_date = datetime.datetime(2023, 8, 2)

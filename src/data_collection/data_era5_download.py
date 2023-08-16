@@ -1,7 +1,15 @@
 import cdsapi
 import threading
 import time
+import os
 from tqdm import tqdm
+from utils import folder_utils
+
+# folder setting
+data_folder = "data"
+data_category = "raw_data"
+output_folder = "ERA5_DATA"
+
 
 dataset1 = 'reanalysis-era5-single-levels'
 data_year = [  # the target years
@@ -95,7 +103,11 @@ def era5_get_data(c, dataset, variable_list, year, month):
     # variable_list: the target variable
     try:
         start_time = time.time()  # Record start time
-        filename = f'era5_single_level_{year}_{month}.nc'
+        output_directory = folder_utils.create_folder(
+            i, data_folder, data_category, output_folder
+        )
+        output_filename =f'era5_single_level_{year}_{month}.nc'
+        output_filepath = os.path.join(output_directory, output_filename)
         c.retrieve(
             dataset,
             {
@@ -114,17 +126,17 @@ def era5_get_data(c, dataset, variable_list, year, month):
                     2,
                 ],  # the UK range
             },
-            filename,
+            output_filepath,
         )
         end_time = time.time()  # Record end time
         download_time = end_time - start_time
         download_times[(year, month)] = download_time
 
-        print(f'{filename} done!')
+        print(f'{output_filename} done!')
         print(f'Download time: {download_time:.3f} s')
 
     except Exception as e:
-        print(f'Error downloading {filename}: {e}\n')
+        print(f'Error downloading {output_filename}: {e}\n')
 
 
 # Multiple threads module for accelerating

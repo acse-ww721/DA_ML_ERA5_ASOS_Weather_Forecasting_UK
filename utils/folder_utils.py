@@ -13,7 +13,7 @@ def get_current_directory():
 def create_folder(c, data_folder, data_category, output_folder):
     # c: country list
     current_directory = get_current_directory()
-    project_root = os.path.abspath(os.path.join(current_directory, "..", ".."))
+    project_root = os.path.abspath(os.path.join(current_directory, "..", "."))
     folder_name = f"{c}_ASOS_DATA"
     folder_path = os.path.join(
         project_root, data_folder, data_category, output_folder, folder_name
@@ -30,8 +30,10 @@ def create_folder(c, data_folder, data_category, output_folder):
     # ... rest of the function ...
 
 
-# 使用示例
-project_root = "/path/to/project"
+# Test example
+# project_root = "/path/to/project"
+country=["WWQ"]
 data_folder = "data"
 data_category = "raw_data"
 output_folder = "ASOS_DATA"
+# create_folder(country[0],data_folder, data_category, output_folder)
