@@ -220,7 +220,7 @@ args_list = [
 ]
 
 with concurrent.futures.ThreadPoolExecutor() as executor:
-    executor.map(download_and_save_data_thread, args_list) # fast
+    executor.map(download_and_save_data_thread, args_list)  # fast
 
 
 # test url:
