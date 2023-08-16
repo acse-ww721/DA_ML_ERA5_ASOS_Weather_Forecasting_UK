@@ -32,7 +32,7 @@ def create_folder(c, data_folder, data_category, output_folder):
 
 # Test example
 # project_root = "/path/to/project"
-country=["WWQ"]
+country = ["WWQ"]
 data_folder = "data"
 data_category = "raw_data"
 output_folder = "ASOS_DATA"

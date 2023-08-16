@@ -97,6 +97,7 @@ def days_check(year, month):
 
     return [str(day).zfill(2) for day in range(1, days_by_month.get(month, 0) + 1)]
 
+
 def era5_get_data(c, dataset, variable_list, year, month):
     # c: api_server
     # dataset: target dataset
@@ -106,7 +107,7 @@ def era5_get_data(c, dataset, variable_list, year, month):
         output_directory = folder_utils.create_folder(
             i, data_folder, data_category, output_folder
         )
-        output_filename =f'era5_single_level_{year}_{month}.nc'
+        output_filename = f'era5_single_level_{year}_{month}.nc'
         output_filepath = os.path.join(output_directory, output_filename)
         c.retrieve(
             dataset,
