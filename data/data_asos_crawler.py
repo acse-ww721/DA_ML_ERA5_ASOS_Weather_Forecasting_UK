@@ -190,7 +190,7 @@ def download_and_save_data(url_site, country, station, startts, endts):
     download_time = end_time - start_time
 
     if data:
-        save_data(data, country, station, startts, endts)
+        save_data(url_site, country, station, startts, endts)
         print(f'{station} - Download time: {download_time:.3f} s')
     else:
         print(f'{station} - Download failed')
@@ -217,7 +217,7 @@ args_list = [
 ]
 
 with concurrent.futures.ThreadPoolExecutor() as executor:
-    executor.map(download_and_save_data_thread, args_list)
+    executor.map(download_and_save_data_thread, args_list) # fast
 
 
 # test url:
