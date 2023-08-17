@@ -10,7 +10,7 @@ def get_current_directory():
         return os.path.abspath(os.path.dirname(""))
 
 
-def create_folder(c, data_folder, data_category, output_folder):
+def find_folder(c, data_folder, data_category, output_folder):
     # c: country list
     current_directory = get_current_directory()
     project_root = os.path.abspath(os.path.join(current_directory, "..", "."))
@@ -18,6 +18,13 @@ def create_folder(c, data_folder, data_category, output_folder):
     folder_path = os.path.join(
         project_root, data_folder, data_category, output_folder, folder_name
     )
+
+    return folder_path
+
+
+def create_folder(c, data_folder, data_category, output_folder):
+    # c: country list
+    folder_path = find_folder(c, data_folder, data_category, output_folder)
 
     try:
         os.makedirs(folder_path, exist_ok=True)
