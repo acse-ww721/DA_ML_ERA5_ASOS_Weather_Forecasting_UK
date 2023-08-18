@@ -49,7 +49,8 @@ def process_asos_rawdata(df):
     df['gust'] = df['gust'] * 0.514444
 
     # Convert inches to meters for "p01i" and "alti" columns
-    df['p01i'] = df['p01i'] * 0.0254
+    df['p01i'] = pd.to_numeric(df['p01i'], errors='coerce') * 0.0254
+
     df['alti'] = df['alti'] * 0.0254
 
     # Convert millibar to Pa for "mslp" column
@@ -57,6 +58,9 @@ def process_asos_rawdata(df):
 
     # Drop columns
     columns_to_drop = [
+        # 'lon',
+        # 'lat',
+        # 'elevation',
         'valid',
         'skyc1',
         'skyc2',
@@ -77,6 +81,7 @@ def process_asos_rawdata(df):
         'snowdepth',
     ]
     df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+    # TODO interpolation for the time data from half a hour to a hour
 
     return df
 
