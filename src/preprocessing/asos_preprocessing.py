@@ -27,6 +27,26 @@ def extract_data_to_df(country, data_folder, data_category, output_folder):
 
 
 def process_asos_rawdata(df):
+    """
+    Unified variable unit based on era5
+    station: three or four character site identifier
+    lat: Latitude of the observation station
+    lon: Longitude of the observation station
+    tmpf: Air Temperature in Celsius degree, typically @ 2 meters
+    dwpf: Dew Point Temperature in Celsius degree, typically @ 2 meters
+    relh: Relative Humidity in %
+    drct: Wind Direction in degrees from *true* north
+    sknt: Wind Speed in m/s
+    p01i: One hour precipitation for the period from the observation time to the time of the previous hourly precipitation reset.
+          This varies slightly by site. Values are in inches. This value may or may not contain frozen precipitation melted by
+          some device on the sensor or estimated by some other means. Unfortunately, we do not know of
+          an authoritative database denoting which station has which sensor.
+    alti: Pressure altimeter in meters
+    mslp: Sea Level Pressure in Pa
+    gust: Wind Gust in m/s
+    feel: Apparent Temperature (Wind Chill or Heat Index) in Celsius degree
+    """
+
     # Split "valid" column into "date" and "time" columns
     df['date'] = (
         df['valid'].str.split(' ', expand=True)[0].str.replace('-', '').astype(int)
@@ -111,4 +131,3 @@ processed_df = process_asos_rawdata(raw_df)
 save_asos_processed_data(
     processed_df, country, data_folder, data_save_category, output_folder
 )
-
