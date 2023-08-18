@@ -14,7 +14,7 @@ def find_folder(c, data_folder, data_category, output_folder):
     # c: country list
     current_directory = get_current_directory()
     project_root = os.path.abspath(os.path.join(current_directory, "..", "."))
-    folder_name = f"{c}_ASOS_DATA"
+    folder_name = f"{c}_{output_folder}"
     folder_path = os.path.join(
         project_root, data_folder, data_category, output_folder, folder_name
     )
