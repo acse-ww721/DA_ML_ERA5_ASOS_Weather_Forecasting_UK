@@ -32,8 +32,8 @@ def process_asos_rawdata(df):
     station: three or four character site identifier
     lat: Latitude of the observation station
     lon: Longitude of the observation station
-    tmpf: Air Temperature in Celsius degree, typically @ 2 meters
-    dwpf: Dew Point Temperature in Celsius degree, typically @ 2 meters
+    tmpf: Air Temperature in Kelvin, typically @ 2 meters
+    dwpf: Dew Point Temperature in Kelvin, typically @ 2 meters
     relh: Relative Humidity in %
     drct: Wind Direction in degrees from *true* north
     sknt: Wind Speed in m/s
@@ -44,7 +44,7 @@ def process_asos_rawdata(df):
     alti: Pressure altimeter in meters
     mslp: Sea Level Pressure in Pa
     gust: Wind Gust in m/s
-    feel: Apparent Temperature (Wind Chill or Heat Index) in Celsius degree
+    feel: Apparent Temperature (Wind Chill or Heat Index) in Kelvin
     """
 
     # Split "valid" column into "date" and "time" columns
@@ -53,15 +53,15 @@ def process_asos_rawdata(df):
     )
     df['time'] = df['valid'].str.split(' ', expand=True)[1]
 
-    # Convert Fahrenheit to Celsius for "tmpf", "feel" and "dwpf" columns
-    df['tmpf'] = (df['tmpf'] - 32) * 5 / 9
+    # Convert Fahrenheit to Kelvin for "tmpf", "feel" and "dwpf" columns
+    df['tmpf'] = (df['tmpf'] - 32) * 5 / 9 + 273.15
     df['tmpf'] = df['tmpf'].round(1)
 
-    df['dwpf'] = (df['dwpf'] - 32) * 5 / 9
+    df['dwpf'] = (df['dwpf'] - 32) * 5 / 9 + 273.15
     df['dwpf'] = df['dwpf'].round(1)
 
-    # Convert Fahrenheit to Celsius for "feel" column
-    df['feel'] = (df['feel'] - 32) * 5 / 9
+    # Convert Fahrenheit to Kelvin for "feel" column
+    df['feel'] = (df['feel'] - 32) * 5 / 9 + 273.15
     df['feel'] = df['feel'].round(1)
 
     # Convert knots to m/s for "sknt" and "gust" columns
