@@ -16,10 +16,24 @@ def extract_year_month_from_filename(filename):
         raise ValueError(f"Cannot extract year and month from filename: {filename}")
 
 
-# Now you have merged datasets for both single level and pressure level data
-def extract_merge_nc_data(country, data_folder, data_category, output_folder):
-    input_folder_path = folder_utils.find_folder(
+def save_era5_processed_data(
+    merged_ds, year, month, country, data_folder, data_category, output_folder
+):
+    output_directory = folder_utils.create_folder(
         country, data_folder, data_category, output_folder
+    )
+    output_filename = f"{country}_ERA5_{year}_{month}_processed_data.nc"
+    output_filepath = os.path.join(output_directory, output_filename)
+    merged_ds.to_netcdf(output_filepath)
+    print(f"{output_filename} done!")
+
+
+# Now you have merged datasets for both single level and pressure level data
+def extract_merge_nc_data(
+    country, data_folder, data_read_category, data_save_category, output_folder
+):
+    input_folder_path = folder_utils.find_folder(
+        country, data_folder, data_read_category, output_folder
     )
 
     # Get all the single_level data filename
@@ -30,7 +44,7 @@ def extract_merge_nc_data(country, data_folder, data_category, output_folder):
     ]
 
     # Create a new blank dataset to store the merged data
-    merged_ds = xr.Dataset()
+    # merged_ds = xr.Dataset()
 
     # Loop single_level files
     for nc_file_A in tqdm(nc_files_single_level):
@@ -56,19 +70,15 @@ def extract_merge_nc_data(country, data_folder, data_category, output_folder):
         ds_A.close()
         ds_B.close()
 
-    return ds_A, year_A, month_A
-
-
-def save_era5_processesd_data(
-    merged_ds, year, month, country, data_folder, data_category, output_folder
-):
-    output_directory = folder_utils.create_folder(
-        country, data_folder, data_category, output_folder
-    )
-    output_filename = f"{country}_ERA5_{year}_{month}_processed_data.nc"
-    output_filepath = os.path.join(output_directory, output_filename)
-    merged_ds.to_netcdf(output_filepath)
-    print(f"{output_filename} done!")
+        save_era5_processed_data(
+            ds_A,
+            year_A,
+            month_A,
+            country,
+            data_folder,
+            data_save_category,
+            output_folder,
+        )
 
 
 # Example usage
@@ -82,9 +92,6 @@ data_save_category = "processed_data"
 output_folder2 = "ERA5_DATA"
 
 #
-year, month, merged_ds = extract_merge_nc_data(
-    country, data_folder, data_read_category, output_folder2
-)
-save_era5_processesd_data(
-    merged_ds, year, month, data_folder, data_save_category, output_folder2
+extract_merge_nc_data(
+    country, data_folder, data_read_category, data_save_category, output_folder2
 )
