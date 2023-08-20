@@ -95,3 +95,5 @@ output_folder2 = "ERA5_DATA"
 extract_merge_nc_data(
     country, data_folder, data_read_category, data_save_category, output_folder2
 )
+
+# TODO Variable description
