@@ -6,66 +6,69 @@ from tqdm import tqdm
 from utils import folder_utils
 
 # folder setting
+country = [
+    "GB",
+]
 data_folder = "data"
 data_category = "raw_data"
 output_folder = "ERA5_DATA"
 
 
-dataset1 = 'reanalysis-era5-single-levels'
+dataset1 = "reanalysis-era5-single-levels"
 data_year = [  # the target years
-    '2022',
-    '2023',
+    "2022",
+    "2023",
 ]
 data_month = [  # the target months
-    '01',
-    '02',
-    '03',
-    '04',
-    '05',
-    '06',
-    '07',
-    '08',
-    '09',
-    '10',
-    '11',
-    '12',
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12",
 ]
 data_time = [  # the target times_UTC
-    '00:00',
-    '01:00',
-    '02:00',
-    '03:00',
-    '04:00',
-    '05:00',
-    '06:00',
-    '07:00',
-    '08:00',
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-    '18:00',
-    '19:00',
-    '20:00',
-    '21:00',
-    '22:00',
-    '23:00',
+    "00:00",
+    "01:00",
+    "02:00",
+    "03:00",
+    "04:00",
+    "05:00",
+    "06:00",
+    "07:00",
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
+    "22:00",
+    "23:00",
 ]
 variable_list_1 = [
-    '10m_u_component_of_wind',
-    '10m_v_component_of_wind',
-    '2m_dewpoint_temperature',
-    '2m_temperature',
-    'instantaneous_10m_wind_gust',
-    'mean_sea_level_pressure',
-    'skin_temperature',
-    'surface_pressure',
-    'total_precipitation',
+    "10m_u_component_of_wind",
+    "10m_v_component_of_wind",
+    "2m_dewpoint_temperature",
+    "2m_temperature",
+    "instantaneous_10m_wind_gust",
+    "mean_sea_level_pressure",
+    "skin_temperature",
+    "surface_pressure",
+    "total_precipitation",
 ]
 
 download_times = {}  # Dictionary to store download times for each task
@@ -105,22 +108,22 @@ def era5_get_data(c, dataset, variable_list, year, month):
     try:
         start_time = time.time()  # Record start time
         output_directory = folder_utils.create_folder(
-            i, data_folder, data_category, output_folder
+            country, data_folder, data_category, output_folder  # i is the data_year
         )
-        output_filename = f'era5_single_level_{year}_{month}.nc'
+        output_filename = f"era5_single_level_{year}_{month}.nc"
         output_filepath = os.path.join(output_directory, output_filename)
         c.retrieve(
             dataset,
             {
-                'product_type': 'reanalysis',
-                'format': 'netcdf',
-                'variable': variable_list,
-                'year': year,
-                'month': month,
-                'day': days_check(year, month),
-                'time': data_time,
+                "product_type": "reanalysis",
+                "format": "netcdf",
+                "variable": variable_list,
+                "year": year,
+                "month": month,
+                "day": days_check(year, month),
+                "time": data_time,
                 # 'format': 'netcdf.zip',
-                'area': [
+                "area": [
                     61,
                     -8,
                     50,
@@ -133,11 +136,11 @@ def era5_get_data(c, dataset, variable_list, year, month):
         download_time = end_time - start_time
         download_times[(year, month)] = download_time
 
-        print(f'{output_filename} done!')
-        print(f'Download time: {download_time:.3f} s')
+        print(f"{output_filename} done!")
+        print(f"Download time: {download_time:.3f} s")
 
     except Exception as e:
-        print(f'Error downloading {output_filename}: {e}\n')
+        print(f"Error downloading {output_filename}: {e}\n")
 
 
 # Multiple threads module for accelerating
@@ -160,8 +163,7 @@ for thread in threads:
 
 # Calculate and print total download times
 total_download_time = sum(download_times.values())
-print(f'Total download time: {total_download_time:.2f} seconds\n')
-
+print(f"Total download time: {total_download_time:.2f} seconds\n")
 
 
 # if_main upadte
