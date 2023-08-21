@@ -92,27 +92,27 @@ def noaa_data_preprocess(raw_df):
     ].copy()
     processed_df = pd.concat([processed_df, tp_df], axis=1)
 
-    # filter the specific column
-    columns_to_keep = [
-        "STATION",
-        "NAME",
-        "LATITUDE",
-        "LONGITUDE",
-        "ELEVATION",
-        "DATE",
-        "TIME",
-        "1_hour_tp",
-        "3_hour_tp",
-        "6_hour_tp",
-        "12_hour_tp",
-        "24_hour_tp",
-        "DEW",
-        "TMP",
-        "WIND_DIRECTORY",
-        "WIND_SPEED",
-    ]
-
-    # Save specific columns
-    processed_df = processed_df.filter(items=columns_to_keep)
+    # # filter the specific column
+    # columns_to_keep = [
+    #     "STATION",
+    #     "NAME",
+    #     "LATITUDE",
+    #     "LONGITUDE",
+    #     "ELEVATION",
+    #     "DATE",
+    #     "TIME",
+    #     "1_hour_tp",
+    #     "3_hour_tp",
+    #     "6_hour_tp",
+    #     "12_hour_tp",
+    #     "24_hour_tp",
+    #     "DEW",
+    #     "TMP",
+    #     "WIND_DIRECTORY",
+    #     "WIND_SPEED",
+    # ]
+    #
+    # # Save specific columns
+    # processed_df = processed_df.filter(items=columns_to_keep)
 
     return processed_df
