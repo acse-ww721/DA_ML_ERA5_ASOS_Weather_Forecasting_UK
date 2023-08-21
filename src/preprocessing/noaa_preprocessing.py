@@ -113,6 +113,6 @@ def noaa_data_preprocess(raw_df):
     ]
 
     # Save specific columns
-    processed_df = processed_df.filter(items=unique_columns_to_keep)
+    processed_df = processed_df.filter(items=columns_to_keep)
 
     return processed_df
