@@ -1,5 +1,6 @@
 import os
 import re
+import numpy as np
 import xarray as xr
 import pandas as pd
 from utils import folder_utils
@@ -28,17 +29,33 @@ def process_wind(wind_str):
     wind_parts = wind_str.split(",")
     wind_directory = wind_parts[0]
     wind_speed = restore_decimal_format(wind_parts[3])
-    return pd.Series({"wind_directory": wind_directory, "wind_speed": wind_speed})
+    return pd.Series({"WIND_DIRECTORY": wind_directory, "WIND_SPEED": wind_speed})
 
 
-def process_aa(aa_str):
-    if aa_str.strip() == "" or aa_str.strip().lower() == "nan":
-        return None, None
+def transform_data(df):
+    # Create new columns based on the times
+    times = [1, 3, 6, 12, 24]
+    for t in times:
+        df[f"{t}_hour_tp"] = np.nan  # Default value is NaN
 
-    aa_parts = aa_str.split(",")
-    hour = int(aa_parts[0])
-    value = restore_decimal_format(aa_parts[1])
-    return hour, value
+    for col in ["AA1", "AA2", "AA3"]:
+        # Check NaN
+        mask = ~df[col].isna()
+        filtered_data = df.loc[mask, col]
+        filtered_data = filtered_data.dropna()  # Remove None & NaN
+
+        # Split data
+        if not filtered_data.empty:
+            splits = filtered_data.str.split(",", expand=True)
+            time_col = splits[0].astype(int)
+            value_col = splits[1].apply(restore_decimal_format)
+
+            for t in times:
+                #
+                idx_to_update = time_col[time_col == t].index
+                df.loc[idx_to_update, f"{t}_hour_tp"] = value_col.loc[idx_to_update]
+
+    return df
 
 
 def noaa_data_preprocess(raw_df):
@@ -63,14 +80,17 @@ def noaa_data_preprocess(raw_df):
     processed_df = pd.concat([processed_df, wind_df], axis=1)
 
     # Process AA1, AA2, AA3 as total precipitation
-
-    # Convert "AA1" column to strings
-    raw_df["AA1"] = raw_df["AA1"].astype(str)
-
-    aa_df = raw_df["AA1"].apply(process_aa)
-    processed_df["6_hour_tp"] = aa_df.apply(lambda x: x[1] if x[0] == 6 else None)
-    processed_df["12_hour_tp"] = aa_df.apply(lambda x: x[1] if x[0] == 12 else None)
-    processed_df["24_hour_tp"] = aa_df.apply(lambda x: x[1] if x[0] == 24 else None)
+    # test_df[["AA1", "AA2", "AA3"]] = test_df[["AA1", "AA2", "AA3"]].astype(str)
+    tp_df = transform_data(raw_df)[
+        [
+            "1_hour_tp",
+            "3_hour_tp",
+            "6_hour_tp",
+            "12_hour_tp",
+            "24_hour_tp",
+        ]
+    ].copy()
+    processed_df = pd.concat([processed_df, tp_df], axis=1)
 
     # filter the specific column
     columns_to_keep = [
@@ -81,15 +101,18 @@ def noaa_data_preprocess(raw_df):
         "ELEVATION",
         "DATE",
         "TIME",
+        "1_hour_tp",
+        "3_hour_tp",
         "6_hour_tp",
         "12_hour_tp",
         "24_hour_tp",
         "DEW",
         "TMP",
-        "WND",
+        "WIND_DIRECTORY",
+        "WIND_SPEED",
     ]
 
-    # 保留指定的列
-    processed_df = processed_df.filter(items=columns_to_keep)
+    # Save specific columns
+    processed_df = processed_df.filter(items=unique_columns_to_keep)
 
     return processed_df
