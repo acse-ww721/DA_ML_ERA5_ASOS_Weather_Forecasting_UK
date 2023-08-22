@@ -58,7 +58,9 @@ def transform_data(df):
     return df
 
 
-def noaa_data_preprocess(raw_df):
+def noaa_data_preprocess(raw_df, start_date, end_date):
+    # filter the time_range
+    raw_df = time_select_noaa(raw_df, start_date, end_date)
     # Reserve specified columns
     processed_df = raw_df[["STATION", "LATITUDE", "LONGITUDE", "ELEVATION"]]
 
@@ -185,6 +187,16 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
     return merged_df
 
 
+def time_select_noaa(processed_df, start_date, end_date):
+    processed_df["DATE"] = pd.to_datetime(processed_df["DATE"], format="%Y%m%d")
+
+    filtered_df = processed_df[
+        (processed_df["DATE"] >= start_date) & (processed_df["DATE"] <= end_date)
+    ]
+
+    return filtered_df
+
+
 # Example usage
 
 country = "GB"
@@ -192,6 +204,9 @@ data_folder = "data"
 data_read_category = "raw_data"
 data_save_category = "processed_data"
 output_folder = "NOAA_DATA"
+start_date = pd.Timestamp("2022-08-01")
+end_date = pd.Timestamp("2023-08-01")
+
 
 folder = folder_utils.find_folder(
     country, data_folder, data_read_category, output_folder
@@ -204,7 +219,9 @@ bulid_noaa_station_network(
     raw_df, country, data_folder, data_save_category, output_folder
 )
 
-processed_df = noaa_data_preprocess(raw_df)
+processed_df = noaa_data_preprocess(raw_df, start_date, end_date)
+
+
 save_noaa_processed_data(
     processed_df, country, data_folder, data_save_category, output_folder
 )
