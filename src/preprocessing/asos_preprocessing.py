@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from utils import folder_utils
+from utils import folder_utils, time_utils
 from tqdm import tqdm
 
 
@@ -15,7 +15,7 @@ def extract_data_to_df(country, data_folder, data_category, output_folder):
     csv_files = [
         f
         for f in os.listdir(input_folder_path)
-        if f.endswith('.csv') and "asos_station_network" not in f
+        if f.endswith(".csv") and "asos_station_network" not in f
     ]
     # Read and merge the csv files in queue
     for csv_file in tqdm(csv_files):
@@ -26,7 +26,7 @@ def extract_data_to_df(country, data_folder, data_category, output_folder):
     return raw_df
 
 
-def process_asos_rawdata(df):
+def process_asos_rawdata(df, start_date, end_date):
     """
     Unified variable unit based on era5
     station: three or four character site identifier
@@ -48,62 +48,93 @@ def process_asos_rawdata(df):
     """
 
     # Split "valid" column into "date" and "time" columns
-    df['date'] = (
-        df['valid'].str.split(' ', expand=True)[0].str.replace('-', '').astype(int)
+    df["date"] = (
+        df["valid"].str.split(" ", expand=True)[0].str.replace("-", "").astype(int)
     )
-    df['time'] = df['valid'].str.split(' ', expand=True)[1]
+    df["time"] = df["valid"].str.split(" ", expand=True)[1]
 
     # Convert Fahrenheit to Kelvin for "tmpf", "feel" and "dwpf" columns
-    df['tmpf'] = (df['tmpf'] - 32) * 5 / 9 + 273.15
-    df['tmpf'] = df['tmpf'].round(1)
+    df["tmpf"] = (df["tmpf"] - 32) * 5 / 9 + 273.15
+    df["tmpf"] = df["tmpf"].round(1)
 
-    df['dwpf'] = (df['dwpf'] - 32) * 5 / 9 + 273.15
-    df['dwpf'] = df['dwpf'].round(1)
+    df["dwpf"] = (df["dwpf"] - 32) * 5 / 9 + 273.15
+    df["dwpf"] = df["dwpf"].round(1)
 
     # Convert Fahrenheit to Kelvin for "feel" column
-    df['feel'] = (df['feel'] - 32) * 5 / 9 + 273.15
-    df['feel'] = df['feel'].round(1)
+    df["feel"] = (df["feel"] - 32) * 5 / 9 + 273.15
+    df["feel"] = df["feel"].round(1)
 
     # Convert knots to m/s for "sknt" and "gust" columns
-    df['sknt'] = df['sknt'] * 0.514444
-    df['gust'] = df['gust'] * 0.514444
+    df["sknt"] = df["sknt"] * 0.514444
+    df["gust"] = df["gust"] * 0.514444
 
     # Convert inches to meters for "p01i" and "alti" columns
-    df['p01i'] = pd.to_numeric(df['p01i'], errors='coerce') * 0.0254
+    df["p01i"] = pd.to_numeric(df["p01i"], errors="coerce") * 0.0254
 
-    df['alti'] = df['alti'] * 0.0254
+    df["alti"] = df["alti"] * 0.0254
 
     # Convert millibar to Pa for "mslp" column
-    df['mslp'] = df['mslp'] * 100
+    df["mslp"] = df["mslp"] * 100
 
     # Drop columns
     columns_to_drop = [
-        # 'lon',
-        # 'lat',
-        # 'elevation',
-        'valid',
-        'skyc1',
-        'skyc2',
-        'skyc3',
-        'skyc4',
-        'skyl1',
-        'skyl2',
-        'skyl3',
-        'skyl4',
-        'wxcodes',
-        'ice_accretion_1hr',
-        'ice_accretion_3hr',
-        'ice_accretion_6hr',
-        'peak_wind_gust',
-        'peak_wind_drct',
-        'peak_wind_time',
-        'metar',
-        'snowdepth',
+        "lon",
+        "lat",
+        "elevation",
+        "valid",
+        "skyc1",
+        "skyc2",
+        "skyc3",
+        "skyc4",
+        "skyl1",
+        "skyl2",
+        "skyl3",
+        "skyl4",
+        "wxcodes",
+        "ice_accretion_1hr",
+        "ice_accretion_3hr",
+        "ice_accretion_6hr",
+        "peak_wind_gust",
+        "peak_wind_drct",
+        "peak_wind_time",
+        "metar",
+        "snowdepth",
     ]
-    df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+    df.drop(columns=columns_to_drop, inplace=True, errors="ignore")
     # TODO interpolation for the time data from half a hour to a hour
 
     return df
+
+
+def merge_csv_station(country, data_folder, data_category, output_folder):
+    # Find csvs
+    input_folder = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    station_network_csv = "GB__asos_station_network.csv"
+    asos_data_csv = "GB_ASOS_processed_data_lite.csv"
+    station_network_csv_path = os.path.join(input_folder, station_network_csv)
+    asos_data_csv_path = os.path.join(input_folder, asos_data_csv)
+
+    # Read csvs
+    station_id_df = pd.read_csv(station_network_csv_path)
+    station_info_df = pd.read_csv(asos_data_csv_path)
+
+    columns_to_drop = [
+        "Country",
+        "Network",
+        "Archive_Begin",
+        "Archive_End",
+        "Time_Domain",
+    ]
+
+    station_id_df = station_id_df.drop(columns=columns_to_drop)
+    station_id_df.rename(columns={"ID": "station"}, inplace=True)
+
+    # Merge by "STATION"
+    merged_df = pd.merge(station_id_df, station_info_df, on="station", how="left")
+
+    return merged_df
 
 
 def save_asos_processed_data(
@@ -115,7 +146,7 @@ def save_asos_processed_data(
     output_filename = f"{country}_ASOS_processed_data.csv"
     output_filepath = os.path.join(output_directory, output_filename)
     processed_df.to_csv(output_filepath, index=False, encoding="utf-8")
-    print(f'{output_filename} done!')
+    print(f"{output_filename} done!")
 
 
 # Example usage
@@ -125,9 +156,12 @@ data_folder = "data"
 data_read_category = "raw_data"
 data_save_category = "processed_data"
 output_folder = "ASOS_DATA"
+start_date = pd.Timestamp("2022-08-01")
+end_date = pd.Timestamp("2023-08-01")
 
 raw_df = extract_data_to_df(country, data_folder, data_read_category, output_folder)
 processed_df = process_asos_rawdata(raw_df)
+processed_df = time_utils.time_select(processed_df, "date", start_date, end_date)
 save_asos_processed_data(
     processed_df, country, data_folder, data_save_category, output_folder
 )

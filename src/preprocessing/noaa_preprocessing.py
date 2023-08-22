@@ -3,7 +3,7 @@ import re
 import numpy as np
 import xarray as xr
 import pandas as pd
-from utils import folder_utils
+from utils import folder_utils, time_utils
 from tqdm import tqdm
 
 
@@ -58,9 +58,19 @@ def transform_data(df):
     return df
 
 
+def time_select(processed_df, start_date, end_date):
+    processed_df["DATE"] = pd.to_datetime(processed_df["DATE"], format="%Y%m%d")
+
+    filtered_df = processed_df[
+        (processed_df["DATE"] >= start_date) & (processed_df["DATE"] <= end_date)
+    ]
+
+    return filtered_df
+
+
 def noaa_data_preprocess(raw_df, start_date, end_date):
     # filter the time_range
-    raw_df = time_select_noaa(raw_df, start_date, end_date)
+    raw_df = time_utils.time_select(raw_df, "DATE", start_date, end_date)
     # Reserve specified columns
     processed_df = raw_df[["STATION", "LATITUDE", "LONGITUDE", "ELEVATION"]]
 
@@ -160,7 +170,7 @@ def bulid_noaa_station_network(
     save_folder = folder_utils.find_folder(
         country, data_folder, data_save_category, output_folder
     )
-    save_csv = "noaa_station_network.csv"
+    save_csv = f"{country}_noaa_station_network.csv"
     save_path = os.path.join(save_folder, save_csv)
     unique_df.to_csv(save_path, index=False)
 
@@ -185,16 +195,6 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
     merged_df = pd.merge(station_id_df, station_info_df, on="STATION", how="left")
 
     return merged_df
-
-
-def time_select_noaa(processed_df, start_date, end_date):
-    processed_df["DATE"] = pd.to_datetime(processed_df["DATE"], format="%Y%m%d")
-
-    filtered_df = processed_df[
-        (processed_df["DATE"] >= start_date) & (processed_df["DATE"] <= end_date)
-    ]
-
-    return filtered_df
 
 
 # Example usage
