@@ -125,7 +125,7 @@ def save_noaa_processed_data(
     output_directory = folder_utils.create_folder(
         country, data_folder, data_category, output_folder
     )
-    output_filename = f"{country}_NOAA__processed_data.nc"
+    output_filename = f"{country}_NOAA_processed_data.csv"
     output_filepath = os.path.join(output_directory, output_filename)
     processed_df.to_csv(output_filepath, index=False, encoding="utf-8")
     print(f"{output_filename} done!")
@@ -165,6 +165,26 @@ def bulid_noaa_station_network(
     # print(unique_df)
 
 
+def merge_csv_station(country, data_folder, data_category, output_folder):
+    # Find csvs
+    input_folder = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    station_network_csv = "noaa_station_network.csv"
+    noaa_data_csv = "GB_NOAA_processed_data.csv"
+    station_network_csv_path = os.path.join(input_folder, station_network_csv)
+    noaa_data_csv_path = os.path.join(input_folder, noaa_data_csv)
+
+    # Read csvs
+    station_id_df = pd.read_csv(station_network_csv_path)
+    station_info_df = pd.read_csv(noaa_data_csv_path)
+
+    # Merge by "STATION"
+    merged_df = pd.merge(station_id_df, station_info_df, on="STATION", how="left")
+
+    return merged_df
+
+
 # Example usage
 
 country = "GB"
@@ -180,7 +200,13 @@ csv_name = "3419834.csv"
 raw_csv_path = os.path.join(folder, csv_name)
 raw_df = pd.read_csv(raw_csv_path)
 
+bulid_noaa_station_network(
+    raw_df, country, data_folder, data_save_category, output_folder
+)
+
 processed_df = noaa_data_preprocess(raw_df)
 save_noaa_processed_data(
     processed_df, country, data_folder, data_save_category, output_folder
 )
+
+merge_df = merge_csv_station(country, data_folder, data_save_category, output_folder)
