@@ -72,11 +72,12 @@ def noaa_data_preprocess(raw_df):
 
     # Convert "TMP" and "DEW" from Celsius to Kelvin to match ERA5
 
-    processed_df["TMP"] = raw_df["TMP"].apply(process_temperature)
-    processed_df["DEW"] = raw_df["DEW"].apply(process_temperature)
+    tqdm.pandas()
+    processed_df["TMP"] = raw_df["TMP"].progress_apply(process_temperature)
+    processed_df["DEW"] = raw_df["DEW"].progress_apply(process_temperature)
 
     # Split "WIND"
-    wind_df = raw_df["WND"].apply(process_wind)
+    wind_df = raw_df["WND"].progress_apply(process_wind)
     processed_df = pd.concat([processed_df, wind_df], axis=1)
 
     # Process AA1, AA2, AA3 as total precipitation
@@ -116,3 +117,70 @@ def noaa_data_preprocess(raw_df):
     # processed_df = processed_df.filter(items=columns_to_keep)
 
     return processed_df
+
+
+def save_noaa_processed_data(
+    processed_df, country, data_folder, data_category, output_folder
+):
+    output_directory = folder_utils.create_folder(
+        country, data_folder, data_category, output_folder
+    )
+    output_filename = f"{country}_NOAA__processed_data.nc"
+    output_filepath = os.path.join(output_directory, output_filename)
+    processed_df.to_csv(output_filepath, index=False, encoding="utf-8")
+    print(f"{output_filename} done!")
+
+
+def bulid_noaa_station_network(
+    raw_df, country, data_folder, data_save_category, output_folder
+):
+    # build station_network
+    # extract the specific columns
+    selected_columns = ["STATION", "NAME", "LATITUDE", "LONGITUDE", "ELEVATION"]
+    selected_df = raw_df[selected_columns]
+
+    # Remove "UK"
+    selected_df["NAME"] = (
+        selected_df["NAME"].str.replace(", UK", "").str.replace('"', "")
+    )
+
+    # Drop duplicates
+    unique_df = selected_df.drop_duplicates()
+
+    # Remain 2 decimals
+    unique_df["LATITUDE"] = unique_df["LATITUDE"].round(2)
+    unique_df["LONGITUDE"] = unique_df["LONGITUDE"].round(2)
+    unique_df["ELEVATION"] = unique_df["ELEVATION"].round(2)
+
+    # save station_network
+
+    folder_utils.create_folder(country, data_folder, data_save_category, output_folder)
+    save_folder = folder_utils.find_folder(
+        country, data_folder, data_save_category, output_folder
+    )
+    save_csv = "noaa_station_network.csv"
+    save_path = os.path.join(save_folder, save_csv)
+    unique_df.to_csv(save_path, index=False)
+
+    # print(unique_df)
+
+
+# Example usage
+
+country = "GB"
+data_folder = "data"
+data_read_category = "raw_data"
+data_save_category = "processed_data"
+output_folder = "NOAA_DATA"
+
+folder = folder_utils.find_folder(
+    country, data_folder, data_read_category, output_folder
+)
+csv_name = "3419834.csv"
+raw_csv_path = os.path.join(folder, csv_name)
+raw_df = pd.read_csv(raw_csv_path)
+
+processed_df = noaa_data_preprocess(raw_df)
+save_noaa_processed_data(
+    processed_df, country, data_folder, data_save_category, output_folder
+)
