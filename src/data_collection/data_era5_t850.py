@@ -146,6 +146,13 @@ data_time = [  # the target times_UTC
     "23:00",
 ]
 
+area_uk = [
+    58,
+    -7,
+    50,
+    2,
+]
+
 # 1,571,328 > 120,000 per time
 
 # dataset setting
@@ -186,12 +193,7 @@ def era5_get_data_t850(c, dataset, variable_list, year, pressure_level):
                 "month": data_month,
                 "day": data_day,
                 "time": data_time,
-                "area": [
-                    58,
-                    -7,
-                    -50,
-                    2,
-                ],
+                "area": area_uk,
             },
             output_filepath,
         )
