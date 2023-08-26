@@ -9,6 +9,15 @@ from utils import folder_utils
 from concurrent.futures import ThreadPoolExecutor  # thread pool module
 
 
+"""
+Download ERA5 data from CDS
+Variables: T850, RH850. T1000, RH1000
+Time range: 1979-2022
+data level: hourly
+data volume: 1,571,328 
+"""
+
+
 # jupyter notebook setting
 notebook_path = os.path.abspath("")
 project_root = os.path.abspath(os.path.join(notebook_path, "../../"))
