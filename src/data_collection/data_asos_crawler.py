@@ -84,9 +84,6 @@ MAX_ATTEMPTS = 6
 #     return folder_path
 
 
-
-
-
 def get_all_network():
     url = "https://mesonet.agron.iastate.edu/request/download.phtml?network=FR__ASOS"
     response = requests.get(url)
