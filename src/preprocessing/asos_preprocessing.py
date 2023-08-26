@@ -3,6 +3,8 @@ import pandas as pd
 from utils import folder_utils, time_utils
 from tqdm import tqdm
 
+"""OLD VERSION"""
+
 
 def extract_data_to_df(country, data_folder, data_category, output_folder):
     # Specify the folder path

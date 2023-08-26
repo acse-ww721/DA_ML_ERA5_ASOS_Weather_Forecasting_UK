@@ -4,6 +4,8 @@ import xarray as xr
 from utils import folder_utils
 from tqdm import tqdm
 
+"""OLD VERSION"""
+
 
 def extract_year_month_from_filename(filename):
     match = re.search(r"(\d{4})_(\d{2})", filename)

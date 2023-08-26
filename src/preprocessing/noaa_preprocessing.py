@@ -6,6 +6,8 @@ import pandas as pd
 from utils import folder_utils, time_utils
 from tqdm import tqdm
 
+"""OLD VERSION"""
+
 
 def restore_decimal_format(encoded_value):
     # Convert data to decimal format
