@@ -3,7 +3,7 @@ import threading
 import time
 import os
 from tqdm import tqdm
-from utils import folder_utils
+from utils import folder_utils, time_utils
 from concurrent.futures import ThreadPoolExecutor  # thread pool module
 from data_era5_t850 import data_year, data_month, data_day, data_time, area_uk
 
@@ -35,6 +35,7 @@ variable_list = [
 
 
 def era5_get_data_single_level(c, dataset, variable_list, year):
+    # multi threads version may have figure in overcapacity error
     # c: api_server
     # dataset: target dataset
     # variable_list: the target variable
@@ -98,4 +99,59 @@ with ThreadPoolExecutor(max_workers=8) as executor:
     for i in tqdm(data_year):
         executor.submit(thread_function, i)
 
-# if_main upadte
+
+# Single thread module for solving long time queue problem
+def era5_get_data_single_level_st(c, dataset, variable_list, year, month):
+    # single thread version
+    # c: api_server
+    # dataset: target dataset
+    # variable_list: the target variable
+    try:
+        output_directory = folder_utils.create_folder(
+            country, data_folder, data_category, output_folder  # i is the data_year
+        )
+        output_filename = f"era5_single_level_{year}.nc"
+        output_filepath = os.path.join(output_directory, output_filename)
+        c.retrieve(
+            dataset,
+            {
+                "product_type": "reanalysis",
+                "format": "netcdf",
+                "variable": "2m_temperature",
+                "year": year,
+                "month": month,
+                "day": time_utils.days_check(year, month),
+                "time": data_time,
+                # 'format': 'netcdf.zip',
+                "area": area_uk,  # the UK range
+            },
+            output_filepath,
+        )
+
+        print(f"{output_filename} done!")
+
+    except Exception as e:
+        print(f"Error downloading {output_filename}: {e}\n")
+
+
+def thread_function_st(year, month):
+    c = cdsapi.Client()  # Initialize client within the thread
+
+    start_time = time.time()  # Record start time
+    era5_get_data_single_level(
+        c,
+        dataset,
+        variable_list,
+        year,
+        month,
+    )
+    end_time = time.time()  # Record end time
+    run_time = end_time - start_time
+    print(f"Download time: {run_time:.3f} s")
+
+
+# Example usage
+
+for i in data_year:
+    for k in data_month:
+        thread_function(i, k)
