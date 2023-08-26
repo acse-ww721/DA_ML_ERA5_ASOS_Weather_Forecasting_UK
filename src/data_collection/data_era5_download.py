@@ -89,5 +89,4 @@ with ThreadPoolExecutor(max_workers=8) as executor:
     for i in tqdm(data_year):
         executor.submit(thread_function, i)
 
-
 # if_main upadte
