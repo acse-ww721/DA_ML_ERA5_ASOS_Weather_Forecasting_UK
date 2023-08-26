@@ -257,7 +257,7 @@ data_category = "raw_data"
 output_folder = "ASOS_DATA"
 
 start_date = datetime.datetime(1976, 1, 1)
-end_date = datetime.datetime(2022, 12, 31)
+end_date = datetime.datetime(2023, 1, 1)  # the end date is 2022/12/31 because the end date is not included
 
 gb_df = get_all_station_by_network(country)
 url_site_list, id_list = get_data_url(gb_df, start_date, end_date)
