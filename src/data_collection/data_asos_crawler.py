@@ -169,7 +169,7 @@ def get_data_url(df, startts, endts):
     url_site_list = []
     id_list = []
     url_site_header = "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?"
-    url_site_tail = f"data=tmpf&"  # add all data variables
+    url_site_tail = f"data=tmpf&"  # add all data variables / f"data=tmpc&"
     url_site_tail += startts.strftime("year1=%Y&month1=%m&day1=%d&")  # add start date
     url_site_tail += endts.strftime("year2=%Y&month2=%m&day2=%d&")  # add end date
     url_site_tail += f"tz=Etc%2FUTC&format=onlycomma&latlon=no&elev=no&missing=null&trace=T&direct=no&report_type=3&report_type=4"  # add data format
@@ -257,7 +257,9 @@ data_category = "raw_data"
 output_folder = "ASOS_DATA"
 
 start_date = datetime.datetime(1976, 1, 1)
-end_date = datetime.datetime(2023, 1, 1)  # the end date is 2022/12/31 because the end date is not included
+end_date = datetime.datetime(
+    2023, 1, 1
+)  # the end date is 2022/12/31 because the end date is not included
 
 gb_df = get_all_station_by_network(country)
 url_site_list, id_list = get_data_url(gb_df, start_date, end_date)
@@ -266,8 +268,9 @@ args_list = [
     for url_site, station_id in zip(url_site_list, id_list)
 ]
 
-with concurrent.futures.ThreadPoolExecutor() as executor:
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
     executor.map(download_and_save_data_thread, args_list)  # fast
+    time.sleep(10)  # wait for 10 seconds to avoid the server overcapacity error
 
 
 # test url 1:
