@@ -14,34 +14,34 @@ from bs4 import BeautifulSoup
 from utils import folder_utils
 
 eu_member_codes = [
-    'AT',
-    'BE',
-    'BG',
-    'HR',
-    'CY',
-    'CZ',
-    'DK',
-    'EE',
-    'FI',
-    'FR',
-    'DE',
-    'GR',
-    'HU',
-    'IE',
-    'IT',
-    'LV',
-    'LT',
-    'LU',
-    'MT',
-    'NL',
-    'PL',
-    'PT',
-    'RO',
-    'SK',
-    'SI',
-    'ES',
-    'SE',
-    'GB',
+    "AT",
+    "BE",
+    "BG",
+    "HR",
+    "CY",
+    "CZ",
+    "DK",
+    "EE",
+    "FI",
+    "FR",
+    "DE",
+    "GR",
+    "HU",
+    "IE",
+    "IT",
+    "LV",
+    "LT",
+    "LU",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SK",
+    "SI",
+    "ES",
+    "SE",
+    "GB",
 ]
 
 # Extract data time range
@@ -73,6 +73,15 @@ MAX_ATTEMPTS = 6
 #         print(f"Folder '{folder_path}' already exists.")
 #
 #     return folder_path
+
+
+"""
+Download t2m data from ASOS
+Variables: t2m
+Time range: 1979-2022
+data level: hourly
+data volume: 365*24*44 = 383040 
+"""
 
 
 def get_all_network():
@@ -160,11 +169,11 @@ def get_data_url(df, startts, endts):
     url_site_list = []
     id_list = []
     url_site_header = "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?"
-    url_site_tail = f"data=all&"  # add all data variables
+    url_site_tail = f"data=tmp&"  # add all data variables
     url_site_tail += startts.strftime("year1=%Y&month1=%m&day1=%d&")  # add start date
     url_site_tail += endts.strftime("year2=%Y&month2=%m&day2=%d&")  # add end date
-    url_site_tail += f"tz=Etc%2FUTC&format=onlycomma&latlon=yes&elev=yes&missing=null&trace=T&direct=no&report_type=3&report_type=4"  # add data format
-    for id in df['ID']:
+    url_site_tail += f"tz=Etc%2FUTC&format=onlycomma&latlon=no&elev=no&missing=null&trace=T&direct=no&report_type=3&report_type=4"  # add data format
+    for id in df["ID"]:
         url_site = f"{url_site_header}station={id}&{url_site_tail}"  # add all stations
         url_site_list.append(url_site)
         id_list.append(id)
@@ -217,7 +226,7 @@ def save_data(url_site, country, station, startts, endts):
 
     # Save the DataFrame to a CSV file
     df.to_csv(output_filepath, index=False, encoding="utf-8")
-    print(f'{output_filename} done!')
+    print(f"{output_filename} done!")
 
 
 def download_and_save_data(url_site, country, station, startts, endts):
@@ -228,9 +237,9 @@ def download_and_save_data(url_site, country, station, startts, endts):
 
     if data:
         save_data(url_site, country, station, startts, endts)
-        print(f'{station} - Download time: {download_time:.3f} s')
+        print(f"{station} - Download time: {download_time:.3f} s")
     else:
-        print(f'{station} - Download failed')
+        print(f"{station} - Download failed")
 
 
 def download_and_save_data_thread(args):
@@ -247,8 +256,8 @@ data_folder = "data"
 data_category = "raw_data"
 output_folder = "ASOS_DATA"
 
-start_date = datetime.datetime(2022, 1, 1)
-end_date = datetime.datetime(2023, 8, 2)
+start_date = datetime.datetime(1976, 1, 1)
+end_date = datetime.datetime(2022, 12, 31)
 
 gb_df = get_all_station_by_network(country)
 url_site_list, id_list = get_data_url(gb_df, start_date, end_date)
@@ -261,9 +270,16 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
     executor.map(download_and_save_data_thread, args_list)  # fast
 
 
-# test url:
+# test url 1:
 """
 https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?
 station=EGAA&data=all&year1=2023&month1=8&day1=14&year2=2023&month2=8&day2=15&tz=Etc%2FUTC&format=onlycomma&latlon=yes&elev=yes&missing=M&trace=T
+&direct=no&report_type=3&report_type=4
+"""
+# test url 2:
+
+"""
+https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?
+station=EGAC&data=tmpf&year1=1976&month1=1&day1=1&year2=2022&month2=12&day2=31&tz=Etc%2FUTC&format=onlycomma&latlon=no&elev=no&missing=null&trace=null
 &direct=no&report_type=3&report_type=4
 """
