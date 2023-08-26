@@ -4,6 +4,16 @@ import time
 import os
 from tqdm import tqdm
 from utils import folder_utils
+from concurrent.futures import ThreadPoolExecutor  # thread pool module
+from data_era5_t850 import data_year, data_month, data_day, data_time, area_uk
+
+"""
+Download ERA5 data from CDS
+variables: t2m from 1979 to 2022
+data level: hourly
+data volume: 365*24*44 = 383040
+"""
+
 
 # folder setting
 country = [
@@ -14,103 +24,24 @@ data_category = "raw_data"
 output_folder = "ERA5_DATA"
 
 
-dataset1 = "reanalysis-era5-single-levels"
-data_year = [  # the target years
-    "2022",
-    "2023",
-]
-data_month = [  # the target months
-    "01",
-    "02",
-    "03",
-    "04",
-    "05",
-    "06",
-    "07",
-    "08",
-    "09",
-    "10",
-    "11",
-    "12",
-]
-data_time = [  # the target times_UTC
-    "00:00",
-    "01:00",
-    "02:00",
-    "03:00",
-    "04:00",
-    "05:00",
-    "06:00",
-    "07:00",
-    "08:00",
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-    "20:00",
-    "21:00",
-    "22:00",
-    "23:00",
-]
-variable_list_1 = [
-    "10m_u_component_of_wind",
-    "10m_v_component_of_wind",
-    "2m_dewpoint_temperature",
-    "2m_temperature",
-    "instantaneous_10m_wind_gust",
-    "mean_sea_level_pressure",
-    "skin_temperature",
-    "surface_pressure",
-    "total_precipitation",
-]
+dataset = "reanalysis-era5-single-levels"
 
-download_times = {}  # Dictionary to store download times for each task
+variable_list = [
+    "2m_temperature",
+]
 
 c = cdsapi.Client()
 
 
-def is_leap_year(year):
-    year = int(year)  # Convert the string to integer
-    return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
-
-
-def days_check(year, month):
-    year = int(year)  # Convert the string to integer
-    days_by_month = {
-        "01": 31,  # January
-        "02": 29 if is_leap_year(year) else 28,  # February
-        "03": 31,  # March
-        "04": 30,  # April
-        "05": 31,  # May
-        "06": 30,  # June
-        "07": 31,  # July
-        "08": 31,  # August
-        "09": 30,  # September
-        "10": 31,  # October
-        "11": 30,  # November
-        "12": 31,  # December
-    }
-
-    return [str(day).zfill(2) for day in range(1, days_by_month.get(month, 0) + 1)]
-
-
-def era5_get_data(c, dataset, variable_list, year, month):
+def era5_get_data_single_level(c, dataset, variable_list, year):
     # c: api_server
     # dataset: target dataset
     # variable_list: the target variable
     try:
-        start_time = time.time()  # Record start time
         output_directory = folder_utils.create_folder(
             country, data_folder, data_category, output_folder  # i is the data_year
         )
-        output_filename = f"era5_single_level_{year}_{month}.nc"
+        output_filename = f"era5_single_level_{year}.nc"
         output_filepath = os.path.join(output_directory, output_filename)
         c.retrieve(
             dataset,
@@ -119,25 +50,16 @@ def era5_get_data(c, dataset, variable_list, year, month):
                 "format": "netcdf",
                 "variable": variable_list,
                 "year": year,
-                "month": month,
-                "day": days_check(year, month),
+                "month": data_month,
+                "day": data_day,
                 "time": data_time,
                 # 'format': 'netcdf.zip',
-                "area": [
-                    61,
-                    -8,
-                    50,
-                    2,
-                ],  # the UK range
+                "area": area_uk,  # the UK range
             },
             output_filepath,
         )
-        end_time = time.time()  # Record end time
-        download_time = end_time - start_time
-        download_times[(year, month)] = download_time
 
         print(f"{output_filename} done!")
-        print(f"Download time: {download_time:.3f} s")
 
     except Exception as e:
         print(f"Error downloading {output_filename}: {e}\n")
@@ -146,24 +68,26 @@ def era5_get_data(c, dataset, variable_list, year, month):
 # Multiple threads module for accelerating
 
 
-def thread_function(year, month):
-    era5_get_data(c, dataset1, variable_list_1, year, month)
+def thread_function(year):
+    c = cdsapi.Client()  # Initialize client within the thread
+
+    start_time = time.time()  # Record start time
+    era5_get_data_single_level(
+        c,
+        dataset,
+        variable_list,
+        year,
+    )
+    end_time = time.time()  # Record end time
+    run_time = end_time - start_time
+    print(f"Download time: {run_time:.3f} s")
 
 
-threads = []
-
-for i in data_year:
-    for j in tqdm(data_month):
-        thread = threading.Thread(target=thread_function, args=(i, j))
-        threads.append(thread)
-        thread.start()
-
-for thread in threads:
-    thread.join()
-
-# Calculate and print total download times
-total_download_time = sum(download_times.values())
-print(f"Total download time: {total_download_time:.2f} seconds\n")
+# Create a thread pool  # 8 threads
+with ThreadPoolExecutor(max_workers=8) as executor:
+    # iterate through the data_year and pressure_level
+    for i in tqdm(data_year):
+        executor.submit(thread_function, i)
 
 
 # if_main upadte
