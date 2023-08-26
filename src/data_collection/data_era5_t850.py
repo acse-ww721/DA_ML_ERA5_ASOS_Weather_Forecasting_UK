@@ -5,7 +5,7 @@ import time
 import os
 
 from tqdm import tqdm
-from utils import folder_utils
+from utils import time_utils, folder_utils
 from concurrent.futures import ThreadPoolExecutor  # thread pool module
 
 
@@ -183,13 +183,13 @@ pressure_level = [
 thread_local = threading.local()
 
 
-def era5_get_data_t850(c, dataset, variable_list, year, pressure_level):
+def era5_get_data_t850(c, dataset, variable_list, year, month, pressure_level):
     # download the whole year data
     try:
         output_directory = folder_utils.create_folder(
             country, data_folder, data_category, output_folder
         )
-        output_filename = f"era5_pressure_level_{year}_{pressure_level}.nc"
+        output_filename = f"era5_pressure_level_{year}_{month}_{pressure_level}.nc"
         output_filepath = os.path.join(output_directory, output_filename)
         c.retrieve(
             dataset,
@@ -199,8 +199,8 @@ def era5_get_data_t850(c, dataset, variable_list, year, pressure_level):
                 "variable": variable_list,
                 "pressure_level": pressure_level,
                 "year": year,
-                "month": data_month,
-                "day": data_day,
+                "month": month,
+                "day": time_utils.days_check(year, month),
                 "time": data_time,
                 "area": area_uk,
             },
@@ -216,7 +216,7 @@ def era5_get_data_t850(c, dataset, variable_list, year, pressure_level):
 # Multiple threads module for accelerating
 
 
-def thread_function(year, pressure_level):
+def thread_function(year, month, pressure_level):
     c = cdsapi.Client()  # Initialize client within the thread
 
     start_time = time.time()  # Record start time
@@ -225,6 +225,7 @@ def thread_function(year, pressure_level):
         dataset,
         variable_list,
         year,
+        month,
         pressure_level,
     )
     end_time = time.time()  # Record end time
@@ -234,7 +235,7 @@ def thread_function(year, pressure_level):
 
 # Create a thread pool  # 8 threads
 with ThreadPoolExecutor(max_workers=8) as executor:
-    # iterate through the data_year and pressure_level
+    # iterate through the data_year and data month to be the most efficient
     for i in tqdm(data_year):
-        for k in tqdm(pressure_level):
+        for k in tqdm(data_month):
             executor.submit(thread_function, i, k)
