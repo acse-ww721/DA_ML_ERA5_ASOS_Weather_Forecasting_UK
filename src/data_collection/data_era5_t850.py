@@ -173,17 +173,18 @@ variable_list = [
     # "specific_humidity",
 ]
 
-pressure_level = [
-    "850",
-    "1000",
-]
+# pressure_level = [
+#     "850",
+#     "1000",
+# ]
 
+pressure_level = "850"
 
 # create thread local storage object
 thread_local = threading.local()
 
 
-def era5_get_data_t850(c, dataset, variable_list, year, month, pressure_level):
+def era5_get_data_t850(c, dataset, variable_list, year, month):
     # download the whole year data
     try:
         output_directory = folder_utils.create_folder(
@@ -216,7 +217,7 @@ def era5_get_data_t850(c, dataset, variable_list, year, month, pressure_level):
 # Multiple threads module for accelerating
 
 
-def thread_function(year, month, pressure_level):
+def thread_function(year, month):
     c = cdsapi.Client()  # Initialize client within the thread
 
     start_time = time.time()  # Record start time
@@ -226,7 +227,6 @@ def thread_function(year, month, pressure_level):
         variable_list,
         year,
         month,
-        pressure_level,
     )
     end_time = time.time()  # Record end time
     run_time = end_time - start_time
@@ -234,7 +234,7 @@ def thread_function(year, month, pressure_level):
 
 
 # Create a thread pool  # 8 threads
-with ThreadPoolExecutor(max_workers=8) as executor:
+with ThreadPoolExecutor(max_workers=2) as executor:
     # iterate through the data_year and data month to be the most efficient
     for i in tqdm(data_year):
         for k in tqdm(data_month):
