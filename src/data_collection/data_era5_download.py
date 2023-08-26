@@ -24,13 +24,14 @@ data_category = "raw_data"
 output_folder = "ERA5_DATA"
 
 
+# variable setting
 dataset = "reanalysis-era5-single-levels"
 
 variable_list = [
     "2m_temperature",
 ]
 
-c = cdsapi.Client()
+# c = cdsapi.Client()
 
 
 def era5_get_data_single_level(c, dataset, variable_list, year):
