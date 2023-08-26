@@ -68,6 +68,14 @@ def era5_get_data_single_level(c, dataset, variable_list, year):
 
 # Multiple threads module for accelerating
 
+"""
+Download t2m data from ASOS
+Variables: T850, RH850. T1000, RH1000
+Time range: 1979-2022
+data level: hourly
+data volume: 1,571,328 
+"""
+
 
 def thread_function(year):
     c = cdsapi.Client()  # Initialize client within the thread
