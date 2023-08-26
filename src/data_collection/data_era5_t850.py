@@ -1,17 +1,22 @@
+import sys
 import cdsapi
 import threading
 import time
 import os
-import sys
+
 from tqdm import tqdm
-from utils import time_utils, folder_utils
+from utils import folder_utils
 from concurrent.futures import ThreadPoolExecutor  # thread pool module
 
 
+# jupyter notebook setting
+notebook_path = os.path.abspath("")
+project_root = os.path.abspath(os.path.join(notebook_path, "../../"))
+sys.path.append(project_root)
+
 # folder setting
-country = [
-    "GB",
-]
+country = "GB"
+
 data_folder = "data"
 data_category = "raw_data"
 output_folder = "ERA5_DATA"
@@ -161,8 +166,6 @@ pressure_level = [
 # create thread local storage object
 thread_local = threading.local()
 
-download_times = {}  # Dictionary to store download times for each task
-
 
 def era5_get_data_t850(c, dataset, variable_list, year, pressure_level):
     # download the whole year data
@@ -221,6 +224,6 @@ def thread_function(year, pressure_level):
 # Create a thread pool  # 8 threads
 with ThreadPoolExecutor(max_workers=8) as executor:
     # iterate through the data_year and pressure_level
-    for i in data_year:
+    for i in tqdm(data_year):
         for k in tqdm(pressure_level):
             executor.submit(thread_function, i, k)
