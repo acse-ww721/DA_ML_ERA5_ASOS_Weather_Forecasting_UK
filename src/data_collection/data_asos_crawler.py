@@ -13,6 +13,15 @@ from bs4 import BeautifulSoup
 # from tqdm import tqdm
 from utils import folder_utils
 
+"""
+Download t2m data from ASOS
+Variables: t2m
+Time range: 1979-2022
+data level: hourly
+data volume: 365*24*44 = 383040 
+"""
+
+
 eu_member_codes = [
     "AT",
     "BE",
@@ -75,13 +84,7 @@ MAX_ATTEMPTS = 6
 #     return folder_path
 
 
-"""
-Download t2m data from ASOS
-Variables: t2m
-Time range: 1979-2022
-data level: hourly
-data volume: 365*24*44 = 383040 
-"""
+
 
 
 def get_all_network():
