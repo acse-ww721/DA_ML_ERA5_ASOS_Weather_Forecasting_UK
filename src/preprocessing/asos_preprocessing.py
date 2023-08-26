@@ -4,7 +4,7 @@ from tqdm import tqdm
 from datetime import datetime, timedelta
 from utils import folder_utils
 
-"""V2"""
+"""V3"""
 
 
 def get_csv_list(country, data_folder, data_category, output_folder):
@@ -69,7 +69,7 @@ def time_rearrange(df):
     Return the processed DataFrame.
     """
     # Create an assistant volume and convert time strings to datetime objects
-    df["valid_datetime"] = pd.to_datetime(df["valid"], format="%d/%m/%Y %H:%M:%S")
+    df["valid_datetime"] = pd.to_datetime(df["valid"], format="%Y-%m-%d %H:%M")
 
     # Delete the data before 1979-01-01
     cutoff_date = datetime(1979, 1, 1)
@@ -77,7 +77,7 @@ def time_rearrange(df):
     # Check if the earliest date is after the cutoff date
     earliest_date = df["valid_datetime"].min()
     if earliest_date >= cutoff_date:
-        raise ValueError(
+        print(
             f"The start date :  ({earliest_date.strftime('%d/%m/%Y')}) is after 19790101, terminate cutoff."
         )
 
@@ -86,7 +86,7 @@ def time_rearrange(df):
     # Create a list to store the indexes of rows to be deleted
     to_delete = []
 
-    for index, row in df.iterrows():
+    for index, row in tqdm(df.iterrows()):
         current_time = row["valid_datetime"]
 
         # If the minute is 20 minutes
@@ -196,6 +196,7 @@ def save_asos_processed_data(
 country = "GB"
 data_folder = "data"
 data_read_category = "raw_data"
+data_test_category = "test_data"
 data_save_category = "processed_data"
 output_folder = "ASOS_DATA"
 
@@ -205,8 +206,17 @@ csv_list, station_list = get_csv_list(
 
 for csv_path, station in tqdm(zip(csv_list, station_list)):
     print(csv_path)
-    raw_df = pd.read_csv(csv_path)
-    processed_df = process_asos_rawdata(raw_df)
-    save_asos_processed_data(
-        processed_df, station, country, data_folder, data_save_category, output_folder
-    )
+    try:
+        raw_df = pd.read_csv(csv_path)
+        processed_df = process_asos_rawdata(raw_df)
+        save_asos_processed_data(
+            processed_df,
+            station,
+            country,
+            data_folder,
+            data_save_category,
+            output_folder,
+        )
+    except Exception as e:
+        print(f"An error occurred for {csv_path}: {e}")
+        continue  # Continue to the next iteration
