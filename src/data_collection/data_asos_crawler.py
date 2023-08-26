@@ -169,7 +169,7 @@ def get_data_url(df, startts, endts):
     url_site_list = []
     id_list = []
     url_site_header = "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?"
-    url_site_tail = f"data=tmp&"  # add all data variables
+    url_site_tail = f"data=tmpf&"  # add all data variables
     url_site_tail += startts.strftime("year1=%Y&month1=%m&day1=%d&")  # add start date
     url_site_tail += endts.strftime("year2=%Y&month2=%m&day2=%d&")  # add end date
     url_site_tail += f"tz=Etc%2FUTC&format=onlycomma&latlon=no&elev=no&missing=null&trace=T&direct=no&report_type=3&report_type=4"  # add data format
