@@ -15,6 +15,9 @@ ddeg_out_lat= 0.25 (32)
 ddeg_out_lon = 0.125 (64)
 """
 
+PREFIX = "era5_pressure_level_"
+SUFFIX = "_850.nc"
+
 
 def get_era5_list(country, data_folder, data_category, output_folder):
     input_folder_path = folder_utils.find_folder(
@@ -23,24 +26,20 @@ def get_era5_list(country, data_folder, data_category, output_folder):
     nc_files = [
         f for f in os.listdir(input_folder_path) if f.endswith(".nc") and "era5" in f
     ]
-    era5_list = []
-    for nc_file in tqdm(nc_files):
-        nc_file_path = os.path.join(input_folder_path, nc_file)
-        era5_list.append(nc_file_path)
-    return era5_list
+    return [
+        os.path.join(input_folder_path, nc_file) for nc_file in nc_files
+    ]  # list for era5 nc files path
 
 
 def merge_ds_by_year(era5_list, country, data_folder, data_category, output_folder):
     """
     Merge netcdf files by year in the given list.
     """
-    prefix = "era5_pressure_level_"
-    suffix = "_850.nc"
 
     # Organize files by year
     files_by_year = {}
     for file in era5_list:
-        if prefix in file and suffix in file:
+        if PREFIX in file and SUFFIX in file:
             year = file.split("_")[3]
             if year not in files_by_year:
                 files_by_year[year] = []
@@ -53,7 +52,7 @@ def merge_ds_by_year(era5_list, country, data_folder, data_category, output_fold
         output_folder = folder_utils.find_folder(
             country, data_folder, data_category, output_folder
         )
-        output_filename = os.path.join(output_folder, f"{prefix}{year}{suffix}")
+        output_filename = os.path.join(output_folder, f"{PREFIX}{year}{SUFFIX}")
         merged_ds.to_netcdf(output_filename)
         print(f"Merged data for {year} saved as {output_filename}")
 
@@ -72,12 +71,11 @@ def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
     :param lon_max: Maximum longitude
     :return: ds: Cut off dataset
     """
-    ds = xr.open_dataset(era5_nc_path)
-    ds = ds.sel(
-        lat=slice(lat_min, lat_max),
-        lon=slice(lon_min, lon_max),
-    )
-    return ds
+    with xr.open_dataset(era5_nc_path) as ds:
+        return ds.sel(
+            lat=slice(lat_min, lat_max),
+            lon=slice(lon_min, lon_max),
+        )
 
 
 # The regrid() function implementation below is a modification based on WeatherBench's GitHub code
@@ -108,7 +106,7 @@ def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=T
         ds_in,
         grid_out,
         method,
-        periodic=True,
+        periodic=False,  # For a specific region, set periodic to False
         reuse_weights=reuse_weights,
     )
 
