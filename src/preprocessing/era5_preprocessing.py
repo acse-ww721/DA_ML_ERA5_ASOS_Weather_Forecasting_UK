@@ -1,86 +1,147 @@
 import os
-import re
 import xarray as xr
+import numpy as np
+import xesmf as xe
 from utils import folder_utils
 from tqdm import tqdm
 
-"""OLD VERSION"""
+"""V2"""
+
+"""
+lat: 57.75 - 50.00 (32)
+lon: -6 + 1.875 (32)
+
+ddeg_out_lat= 0.25 (32)
+ddeg_out_lon = 0.125 (64)
+"""
 
 
-def extract_year_month_from_filename(filename):
-    match = re.search(r"(\d{4})_(\d{2})", filename)
-    if match:
-        year = int(match.group(1))
-        month = int(match.group(2))
-        month = f"{month:02}"
-        return year, month
-    else:
-        raise ValueError(f"Cannot extract year and month from filename: {filename}")
-
-
-def save_era5_processed_data(
-    merged_ds, year, month, country, data_folder, data_category, output_folder
-):
-    output_directory = folder_utils.create_folder(
+def get_era5_list(country, data_folder, data_category, output_folder):
+    input_folder_path = folder_utils.find_folder(
         country, data_folder, data_category, output_folder
     )
-    output_filename = f"{country}_ERA5_{year}_{month}_processed_data.nc"
-    output_filepath = os.path.join(output_directory, output_filename)
-    merged_ds.to_netcdf(output_filepath)
-    print(f"{output_filename} done!")
+    nc_files = [
+        f for f in os.listdir(input_folder_path) if f.endswith(".nc") and "era5" in f
+    ]
+    era5_list = []
+    for nc_file in tqdm(nc_files):
+        nc_file_path = os.path.join(input_folder_path, nc_file)
+        era5_list.append(nc_file_path)
+    return era5_list
 
 
-# Now you have merged datasets for both single level and pressure level data
-def extract_merge_nc_data(
-    country, data_folder, data_read_category, data_save_category, output_folder
-):
-    input_folder_path = folder_utils.find_folder(
-        country, data_folder, data_read_category, output_folder
+def merge_ds_by_year(era5_list, country, data_folder, data_category, output_folder):
+    """
+    Merge netcdf files by year in the given list.
+    """
+    prefix = "era5_pressure_level_"
+    suffix = "_850.nc"
+
+    # Organize files by year
+    files_by_year = {}
+    for file in era5_list:
+        if prefix in file and suffix in file:
+            year = file.split("_")[3]
+            if year not in files_by_year:
+                files_by_year[year] = []
+            files_by_year[year].append(file)
+
+    # Merge and save for each year
+
+    for year, file_list in files_by_year.items():
+        merged_ds = xr.open_mfdataset(file_list, combine="by_coords")
+        output_folder = folder_utils.find_folder(
+            country, data_folder, data_category, output_folder
+        )
+        output_filename = os.path.join(output_folder, f"{prefix}{year}{suffix}")
+        merged_ds.to_netcdf(output_filename)
+        print(f"Merged data for {year} saved as {output_filename}")
+
+    # Get unique years
+    unique_years = list(files_by_year.keys())
+    return unique_years
+
+
+def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
+    """
+    Cut off the dataset with given lat and lon range
+    :param ds: Input xarray dataset
+    :param lat_min: Minimum latitude
+    :param lat_max: Maximum latitude
+    :param lon_min: Minimum longitude
+    :param lon_max: Maximum longitude
+    :return: ds: Cut off dataset
+    """
+    ds = xr.open_dataset(era5_nc_path)
+    ds = ds.sel(
+        lat=slice(lat_min, lat_max),
+        lon=slice(lon_min, lon_max),
+    )
+    return ds
+
+
+# The regrid() function implementation below is a modification based on WeatherBench's GitHub code
+# Original code link: https://github.com/pangeo-data/WeatherBench/blob/master/src/regrid.py
+def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=True):
+    """
+    Regrid horizontally (longitude direction).
+    :param ds_in: Input xarray dataset
+    :param ddeg_out: Output resolution
+    :param method: Regridding method
+    :param reuse_weights: Reuse weights for regridding
+    :return: ds_out: Regridded dataset
+    """
+    # Rename to ESMF compatible coordinates
+    if "latitude" in ds_in.coords:
+        ds_in = ds_in.rename({"latitude": "lat", "longitude": "lon"})
+
+    # Create output grid
+    grid_out = xr.Dataset(
+        {
+            "lat": (["lat"], np.arange(50, 58, ddeg_out_lat)),  # 50 - 57.75
+            "lon": (["lon"], np.arange(-6, 2.0, ddeg_out_lon)),  # -6 - 1.875
+        }
     )
 
-    # Get all the single_level data filename
-    nc_files_single_level = [
-        f
-        for f in os.listdir(input_folder_path)
-        if f.endswith(".nc") and "single_level" in f
-    ]
+    # Create regridder
+    regridder = xe.Regridder(
+        ds_in,
+        grid_out,
+        method,
+        periodic=True,
+        reuse_weights=reuse_weights,
+    )
 
-    # Create a new blank dataset to store the merged data
-    # merged_ds = xr.Dataset()
+    # Hack to speed up regridding of large files
+    ds_list = []
+    chunk_size = 500
+    n_chunks = len(ds_in.time) // chunk_size + 1
+    for i in range(n_chunks):
+        ds_small = ds_in.isel(time=slice(i * chunk_size, (i + 1) * chunk_size))
+        ds_list.append(regridder(ds_small).astype("float32"))
+    ds_out = xr.concat(ds_list, dim="time")
 
-    # Loop single_level files
-    for nc_file_A in tqdm(nc_files_single_level):
-        nc_file_path_A = os.path.join(input_folder_path, nc_file_A)
+    # Set attributes since they get lost during regridding
+    for var in ds_out:
+        ds_out[var].attrs = ds_in[var].attrs
+    ds_out.attrs.update(ds_in.attrs)
 
-        #
-        ds_A = xr.open_dataset(nc_file_path_A)
+    # Regrid dataset
+    # ds_out = regridder(ds_in)
+    return ds_out
 
-        # extract the corresponding year and month
-        year_A, month_A = extract_year_month_from_filename(nc_file_A)
 
-        # Build the pressure level file path
-        nc_file_B = f"era5_pressure_level_{year_A}_{month_A}_1000.nc"
-        nc_file_path_B = os.path.join(input_folder_path, nc_file_B)
-
-        #
-        ds_B = xr.open_dataset(nc_file_path_B)
-
-        # Merge single_level and pressure level by the key "time" and overwrite ds_A
-        ds_A = ds_A.combine_first(ds_B)
-
-        # Close all dataset
-        ds_A.close()
-        ds_B.close()
-
-        save_era5_processed_data(
-            ds_A,
-            year_A,
-            month_A,
-            country,
-            data_folder,
-            data_save_category,
-            output_folder,
-        )
+def save_regridded_era5(
+    ds_out, year, country, data_folder, data_category, output_folder
+):
+    prefix = "era5_pressure_level_"
+    suffix = "_850.nc"
+    output_folder = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    output_filename = os.path.join(output_folder, f"{prefix}{year}_regrid{suffix}")
+    ds_out.to_netcdf(output_filename)
+    print(f"Regridded data for {year} saved as {output_filename}")
 
 
 # Example usage
@@ -90,12 +151,19 @@ data_folder = "data"
 data_test_category = "test_data"
 data_read_category = "raw_data"
 data_save_category = "processed_data"
-# output_folder = "ASOS_DATA"
-output_folder2 = "ERA5_DATA"
+output_folder = "ERA5_DATA"
+ddeg_out_lat = 0.25
+ddeg_out_lon = 0.125
 
-#
-extract_merge_nc_data(
-    country, data_folder, data_read_category, data_save_category, output_folder2
+era5_list = get_era5_list(country, data_folder, data_read_category, output_folder)
+year_list = merge_ds_by_year(
+    era5_list, country, data_folder, data_save_category, output_folder
 )
-
-# TODO Variable description
+merge_era5_list = get_era5_list(country, data_folder, data_save_category, output_folder)
+for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
+    ds = xr.open_dataset(merged_ds_path)
+    ds = cutoff_ds(merged_ds_path, 50, 58, -6, 2)
+    ds_out = regrid(ds, ddeg_out_lat, ddeg_out_lon)
+    save_regridded_era5(
+        ds_out, year, country, data_folder, data_save_category, output_folder
+    )
