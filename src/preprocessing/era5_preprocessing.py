@@ -1,13 +1,16 @@
 import os
+import re
 import xarray as xr
 import numpy as np
 import xesmf as xe
+import dask
 from utils import folder_utils
 from tqdm import tqdm
 
-"""V2"""
+"""V4 
+Running on the Windows 11 system
+because xesmf is not supported on M1 Silicon Mac
 
-"""
 lat: 57.75 - 50.00 (32)
 lon: -6 + 1.875 (32)
 
@@ -38,21 +41,25 @@ def merge_ds_by_year(era5_list, country, data_folder, data_category, output_fold
 
     # Organize files by year
     files_by_year = {}
+    pattern = r"era5_pressure_level_(\d{4})_\d{2}_\d{3}\.nc"
+
     for file in era5_list:
-        if PREFIX in file and SUFFIX in file:
-            year = file.split("_")[3]
+        match = re.search(pattern, file)
+        if match:
+            year = match.group(1)
             if year not in files_by_year:
                 files_by_year[year] = []
             files_by_year[year].append(file)
 
     # Merge and save for each year
+    # Calculate the output folder outside the loop
+    output_folder_path = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
 
     for year, file_list in files_by_year.items():
         merged_ds = xr.open_mfdataset(file_list, combine="by_coords")
-        output_folder = folder_utils.find_folder(
-            country, data_folder, data_category, output_folder
-        )
-        output_filename = os.path.join(output_folder, f"{PREFIX}{year}{SUFFIX}")
+        output_filename = os.path.join(output_folder_path, f"{PREFIX}{year}{SUFFIX}")
         merged_ds.to_netcdf(output_filename)
         print(f"Merged data for {year} saved as {output_filename}")
 
@@ -64,7 +71,7 @@ def merge_ds_by_year(era5_list, country, data_folder, data_category, output_fold
 def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
     """
     Cut off the dataset with given lat and lon range
-    :param ds: Input xarray dataset
+    :param era5_nc_path: Input xarray dataset path
     :param lat_min: Minimum latitude
     :param lat_max: Maximum latitude
     :param lon_min: Minimum longitude
@@ -73,8 +80,10 @@ def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
     """
     with xr.open_dataset(era5_nc_path) as ds:
         return ds.sel(
-            lat=slice(lat_min, lat_max),
-            lon=slice(lon_min, lon_max),
+            latitude=slice(
+                lat_max, lat_min
+            ),  # Reversed latitudes due to the era5 settings
+            longitude=slice(lon_min, lon_max),
         )
 
 
@@ -84,7 +93,8 @@ def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=T
     """
     Regrid horizontally (longitude direction).
     :param ds_in: Input xarray dataset
-    :param ddeg_out: Output resolution
+    :param ddeg_out_lat: Output resolution latitude
+    :param ddeg_out_lon: Output resolution longitude
     :param method: Regridding method
     :param reuse_weights: Reuse weights for regridding
     :return: ds_out: Regridded dataset
@@ -107,7 +117,7 @@ def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=T
         grid_out,
         method,
         periodic=False,  # For a specific region, set periodic to False
-        reuse_weights=reuse_weights,
+        reuse_weights=False,  # recalculat weight automatically
     )
 
     # Hack to speed up regridding of large files
@@ -153,11 +163,19 @@ output_folder = "ERA5_DATA"
 ddeg_out_lat = 0.25
 ddeg_out_lon = 0.125
 
-era5_list = get_era5_list(country, data_folder, data_read_category, output_folder)
+# era5_list = []
+era5_list = get_era5_list(
+    country, data_folder, data_read_category, output_folder
+)  # len = 528
+# year_list = []
 year_list = merge_ds_by_year(
     era5_list, country, data_folder, data_save_category, output_folder
-)
-merge_era5_list = get_era5_list(country, data_folder, data_save_category, output_folder)
+)  # len = 44 (1979-2022)
+merge_era5_list = get_era5_list(
+    country, data_folder, data_save_category, output_folder
+)  # len = 44 (1979-2022)
+
+
 for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
     ds = xr.open_dataset(merged_ds_path)
     ds = cutoff_ds(merged_ds_path, 50, 58, -6, 2)
@@ -165,3 +183,4 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
     save_regridded_era5(
         ds_out, year, country, data_folder, data_save_category, output_folder
     )
+    ds.close()
