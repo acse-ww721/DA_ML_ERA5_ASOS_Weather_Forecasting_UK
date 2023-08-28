@@ -257,8 +257,8 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
         chunksize = 200_000
         dtype_optimization = {
             't2m': 'float32',  # as era5 setting
-            'latitude': 'float32',  # Optimize to float32 if sufficient.
-            'longitude': 'float32',  # Optimize to float32 if sufficient.
+            'latitude': 'float64',  # Optimize to float32 if sufficient.
+            'longitude': 'float64',  # Optimize to float32 if sufficient.
         }
 
         # 2. Adjust chunk size
@@ -297,7 +297,7 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
         combined_ds = combined_ds.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
         ddeg_out_lat = 0.25
         ddeg_out_lon = 0.125
-        regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
+        # regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False) # should regrid by year not at the whole ds
         del combined_ds
         gc.collect()
 
