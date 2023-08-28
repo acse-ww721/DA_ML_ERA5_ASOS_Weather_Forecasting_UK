@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from utils import folder_utils
 from era5_preprocessing import regrid
 
-"""V6"""
+"""V7"""
 
 
 def get_csv_list(country, data_folder, data_category, output_folder):
@@ -232,14 +232,15 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
 
 
 
-def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
+def dataframe_to_nc4(merged_df, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year"""
     try:
-        # Use Dask to read the CSV in chunks
-        merged_dask_df = dd.read_csv(merged_csv_path)
+        # Convert the pandas DataFrame to Dask DataFrame
+        merged_dask_df = dd.from_pandas(merged_df, npartitions=10)  # Adjust npartitions based on the size of the data
+        merged_dask_df = merged_dask_df.set_index(['latitude', 'longitude', 'time'])
 
         # Convert the Dask DataFrame to xarray dataset
-        ds_in = xr.Dataset.from_dask_dataframe(merged_dask_df.set_index(['latitude', 'longitude', 'time']))
+        ds_in = xr.DataArray(merged_dask_df['t2m'], coords=merged_dask_df.indexes, dims=['latitude', 'longitude', 'time'])
 
         ds_in = ds_in.sel(
             latitude=slice(58, 50),  # Reversed latitudes due to the era5 settings
@@ -306,4 +307,4 @@ for csv_path, station in tqdm(zip(csv_list, station_list)):
 
 # Merge all csv files in the folder and add station latlon information
 merged_df = merge_csv_station(country, data_folder, data_save_category, output_folder)
-csv_to_nc4(merged_df, country, data_folder, data_save_category, output_folder)
+dataframe_to_nc4(merged_df, country, data_folder, data_save_category, output_folder)
