@@ -256,16 +256,15 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
     try:
         # Function to process each partition to xarray Dataset
         def process_partition_to_xarray(df_partition):
-            data_vars = {
-                't2m': df_partition['t2m'].values
-            }
+            data = df_partition['t2m'].values
             coords = {
                 'latitude': df_partition['latitude'].values,
                 'longitude': df_partition['longitude'].values,
                 'time': df_partition['time'].values
             }
-            ds = xr.Dataset(data_vars, coords=coords)
-            return ds
+            # Using the DataArray structure here for 't2m' and then converting it to a Dataset
+            da = xr.DataArray(data, coords=coords, dims=list(coords.keys()), name='t2m')
+            return da.to_dataset()
 
         # 1. Use Dask's lazy computation strategy.
         chunksize = 200_000
