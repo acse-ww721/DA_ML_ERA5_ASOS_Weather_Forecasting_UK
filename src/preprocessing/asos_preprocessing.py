@@ -165,53 +165,66 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
     """Merge all csv files in the folder and add station latlon information"""
 
     # Process station_network
-    input_folder = folder_utils.find_folder(
-        country, data_folder, data_category, output_folder
-    )
-    station_network_csv = "GB__asos_station_network.csv"
-    station_network_csv_path = os.path.join(input_folder, station_network_csv)
+    try:
+        input_folder = folder_utils.find_folder(
+            country, data_folder, data_category, output_folder
+        )
 
-    # Read station network CSV
-    station_id_df = pd.read_csv(station_network_csv_path)
+        station_network_csv = "GB__asos_station_network.csv"
+        station_network_csv_path = os.path.join(input_folder, station_network_csv)
 
-    columns_to_keep = [
-        "ID",
-        "Latitude",
-        "Logitude",
-    ]
+        # Read station network CSV
+        station_id_df = pd.read_csv(station_network_csv_path)
 
-    station_id_df = station_id_df[columns_to_keep]
-    rename_mapping = {
-        "ID": "station",
-        "Latitude": "latitude",
-        "Logitude": "longitude",  # Fixed the typo
-    }
+        columns_to_keep = [
+            "ID",
+            "Latitude",
+            "Logitude",
+        ]
 
-    station_id_df.rename(columns=rename_mapping, inplace=True)
+        station_id_df = station_id_df[columns_to_keep]
+        rename_mapping = {
+            "ID": "station",
+            "Latitude": "latitude",
+            "Logitude": "longitude",  # Fixed the typo
+        }
 
-    # Process station_info_dataframe
-    # asos_data_csv = "GB_ASOS_processed_data_lite.csv"
-    # asos_data_csv_path = os.path.join(input_folder, asos_data_csv)
-    # station_info_df = pd.read_csv(asos_data_csv_path)
+        station_id_df.rename(columns=rename_mapping, inplace=True)
 
-    # Iterate through CSV files in the folder
-    for filename in tqdm(os.listdir(input_folder)):
-        if filename.startswith("GB_ASOS_") and filename.endswith("_processed_data.csv"):
-            csv_path = os.path.join(input_folder, filename)
+        # Check if input folder is empty
+        files_in_directory = os.listdir(input_folder)
+        if not files_in_directory:
+            print("Error: The specified folder is empty.")
+            return None
 
-            # Read the CSV file
-            station_info_df = pd.read_csv(csv_path)
+        # Iterate through CSV files in the folder
+        merged_df_list = []
+        for filename in tqdm(files_in_directory):
+            if filename.startswith("GB_ASOS_") and filename.endswith("_processed_data.csv"):
+                csv_path = os.path.join(input_folder, filename)
 
-            # Merge data based on "station" column
-            merged_df = pd.merge(
-                station_id_df, station_info_df, on="station", how="left"
-            )
-            # Append the merged data to the final DataFrame
-            merged_df = merged_df.append(merged_df, ignore_index=True)
+                # Use chunk reading for large files
+                chunk_size = 10000  # Adjust as needed
+                chunks = pd.read_csv(csv_path, chunksize=chunk_size)
+                for chunk in chunks:
+                    try:
+                        merged_df = pd.merge(station_id_df, chunk, on="station", how="left")
+                        merged_df_list.append(merged_df)
+                    except Exception as e:
+                        print(f"Error processing chunk in file {filename}: {e}")
+                del chunk
 
-    desired_order = ["latitude", "longitude", "time", "t2m", "station"]
-    merged_df = merged_df[desired_order]
-    return merged_df
+        # Concatenate all dataframes in the list
+        merged_df_all = pd.concat(merged_df_list, ignore_index=True)
+        desired_order = ["latitude", "longitude", "time", "t2m", "station"]
+        merged_df_all = merged_df_all[desired_order]
+
+        del merged_df_list  # Further release memory
+        return merged_df_all
+
+    except Exception as e:
+        print(f"Error processing files: {e}")
+        return None
 
 
 def csv_to_nc4(merged_df, country, data_folder, data_category, output_folder):
