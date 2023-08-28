@@ -240,7 +240,6 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         )
         year_list = []
         for year, group in tqdm(grouped):
-            year =year.astype(int)
             output_filename = f"{country}_merged_ASOS_{year}.csv"
             output_path = os.path.join(output_directory, output_filename)
             group.to_csv(output_path, index=False, encoding="utf-8")
@@ -249,27 +248,24 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
 
         del merged_df_list  # Further release memory
 
-        return year_list
     except Exception as e:
         print(f"Error processing files: {e}")
         return None
 
 
 
-# def save_asos_merged_data(
-#     merged_df, country, data_folder, data_category, output_folder
-# ):
-#     output_directory = folder_utils.find_folder(
-#         country, data_folder, data_category, output_folder
-#     )
-#     output_filename = f"{country}_ASOS_merged_data.csv"
-#     output_filepath = os.path.join(output_directory, output_filename)
-#     merged_df.to_csv(output_filepath, index=False, encoding="utf-8")
-#     print(f"{output_filename} done!")
-#     return output_filepath
+def get_year(start_year, end_year):
+    # start_year = 1979
+    # end_year = 2023
+    year_list = list(range(start_year, end_year + 1))
+
+    # Convert the integer list to a string list
+    year_str_list = [str(year) for year in year_list]
+
+    return year_str_list
 
 
-def get_asos_year_list(country, data_folder, data_category, output_folder):
+def get_asos_year_file_list(country, data_folder, data_category, output_folder):
     input_folder_path = folder_utils.find_folder(
         country, data_folder, data_category, output_folder
     )
@@ -283,9 +279,15 @@ def get_asos_year_list(country, data_folder, data_category, output_folder):
 
 def csv_to_nc4(merged_csv_path,year, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year."""
-    df = pd.read_csv(merged_csv_path)
+    parse_dates = ["time"]
+    dtype_optimization = {
+        't2m': 'float32',
+        'latitude': 'float64',
+        'longitude': 'float64',
+    }
+    df = pd.read_csv(merged_csv_path,dtype=dtype_optimization, parse_dates=parse_dates)
     ds_in = xr.Dataset.from_dataframe(df.set_index(['latitude', 'longitude', 'time']))
-    ds_in = ds_in.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
+    ds_in = ds_in.sel(latitude=slice(50, 58), longitude=slice(-6, 2)) # not reverse as era5
     ddeg_out_lat = 0.25
     ddeg_out_lon = 0.125
     regridded_ds = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
@@ -407,8 +409,9 @@ for csv_path, station in tqdm(zip(csv_list, station_list)):
 ############### Make the same format as era5 dataset including cutoff and regrid ##################
 
 # Merge all csv files in the folder and add station latlon information
-year_list = merge_csv_station(country, data_folder, data_save_category, output_folder)
-csv_paths = get_csv_list(country,data_folder,data_save_category,output_folder)
-for year,csv_path in zip(year_list,csv_paths):
+merge_csv_station(country, data_folder, data_save_category, output_folder)
+year_list = get_year(start_year=1979,end_year=2023)
+csv_paths = get_asos_year_file_list(country,data_folder,data_save_category,output_folder)
+for year,csv_path in tqdm(zip(year_list,csv_paths)):
     csv_to_nc4(csv_path,year,country,data_folder,data_save_category,output_folder)
 
