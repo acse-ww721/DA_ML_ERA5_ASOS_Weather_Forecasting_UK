@@ -232,11 +232,14 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
 
 
 
-def csv_to_nc4(merged_df, country, data_folder, data_category, output_folder):
+def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year"""
     try:
-        # Convert the DataFrame to xarray dataset
-        ds_in = xr.Dataset.from_dataframe(merged_df.set_index(['latitude', 'longitude','time', ]))
+        # Use Dask to read the CSV in chunks
+        merged_dask_df = dd.read_csv(merged_csv_path)
+
+        # Convert the Dask DataFrame to xarray dataset
+        ds_in = xr.Dataset.from_dask_dataframe(merged_dask_df.set_index(['latitude', 'longitude', 'time']))
 
         ds_in = ds_in.sel(
             latitude=slice(58, 50),  # Reversed latitudes due to the era5 settings
@@ -253,7 +256,7 @@ def csv_to_nc4(merged_df, country, data_folder, data_category, output_folder):
         )
 
         # Split and save by year
-        years = ds_out["time.year"].unique()
+        years = ds_out["time.year"].unique().values  # Dask array, need .values
         for year in tqdm(years):
             year_ds = ds_out.sel(time=str(year))
             output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
