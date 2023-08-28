@@ -1,11 +1,12 @@
 import os
 import pandas as pd
+import xarray as xr
 from tqdm import tqdm
 from datetime import datetime, timedelta
 from utils import folder_utils
 from era5_preprocessing import get_era5_list, cutoff_ds, merge_ds_by_year, regrid
 
-"""V4"""
+"""V5"""
 
 
 def get_csv_list(country, data_folder, data_category, output_folder):
@@ -216,7 +217,7 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
 
         # Concatenate all dataframes in the list
         merged_df_all = pd.concat(merged_df_list, ignore_index=True)
-        desired_order = ["latitude", "longitude", "time", "t2m", "station"]
+        desired_order = ["latitude", "longitude", "time", "t2m"]
         merged_df_all = merged_df_all[desired_order]
 
         del merged_df_list  # Further release memory
@@ -227,37 +228,41 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         return None
 
 
+
 def csv_to_nc4(merged_df, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year"""
-    # Convert the DataFrame to xarray dataset
-    ds_in = merged_df.to_xarray()
+    try:
+        # Convert the DataFrame to xarray dataset
+        ds_in = xr.Dataset.from_dataframe(merged_df.set_index(['latitude', 'longitude','time', ]))
 
-    ds_in.sel(
-        latitude=slice(58, 50),  # Reversed latitudes due to the era5 settings
-        longitude=slice(-6, 2),
-    )
-    ddeg_out_lat = 0.25
-    ddeg_out_lon = 0.125
-    ds_out = regrid(
-        ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False
-    )
+        ds_in = ds_in.sel(
+            latitude=slice(58, 50),  # Reversed latitudes due to the era5 settings
+            longitude=slice(-6, 2),
+        )
+        ddeg_out_lat = 0.25
+        ddeg_out_lon = 0.125
 
-    # Save the dataset as netCDF4 format
-    # ds.to_netcdf("GB_ASOS_processed_data_uk.nc")
-    # print("GB_ASOS_processed_data_uk.nc saved!")
+        # Assuming regrid function is defined/imported
+        ds_out = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
 
-    output_directory = folder_utils.create_folder(
-        country, data_folder, data_category, output_folder
-    )
+        output_directory = folder_utils.create_folder(
+            country, data_folder, data_category, output_folder
+        )
 
-    # Split and save by year
-    years = ds_out["time.year"].unique()
-    for year in tqdm(years):
-        year_ds = ds_out.sel(time=str(year))
-        output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
-        output_filepath = os.path.join(output_directory, output_filename_nc)
-        year_ds.to_netcdf(output_filepath)
-        print(f"{output_filename_nc} saved !")
+        # Split and save by year
+        years = ds_out["time.year"].unique()
+        for year in tqdm(years):
+            year_ds = ds_out.sel(time=str(year))
+            output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
+            output_filepath = os.path.join(output_directory, output_filename_nc)
+            year_ds.to_netcdf(output_filepath)
+            print(f"{output_filename_nc} saved !")
+
+        return ds_out  # Optionally return the dataset for further use
+
+    except Exception as e:
+        print(f"Error processing and saving data: {e}")
+        return None
 
 
 # Example usage
