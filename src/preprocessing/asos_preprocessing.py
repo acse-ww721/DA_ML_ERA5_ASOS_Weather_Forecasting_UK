@@ -1,4 +1,5 @@
 import os
+import gc
 import pandas as pd
 import xarray as xr
 import dask.dataframe as dd
@@ -250,63 +251,71 @@ def save_asos_merged_data(
 #     return pd.to_datetime(x, format='%Y-%m-%d %H:%M:%S')
 
 def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
-    """Convert the merged CSV file to netCDF4 format by year"""
+    """Convert the merged CSV file to netCDF4 format by year."""
     try:
-        # Use Dask to read the CSV in chunks with optimized datatypes
+        # 1. Use Dask's lazy computation strategy.
         chunksize = 200_000
         dtype_optimization = {
             't2m': 'float32',  # as era5 setting
-            'latitude': 'float64',
-            'longitude': 'float64',
-            # 'time': 'datetime64[ns]'
+            'latitude': 'float32',  # Optimize to float32 if sufficient.
+            'longitude': 'float32',  # Optimize to float32 if sufficient.
         }
-        merged_dask_df_iter = dd.read_csv(merged_csv_path, blocksize=chunksize, dtype=dtype_optimization,
-                                          parse_dates=['time'], date_format='%Y-%m-%d %H:%M:%S')
+
+        # 2. Adjust chunk size
+        merged_dask_df_iter = dd.read_csv(
+            merged_csv_path,
+            blocksize=chunksize,
+            dtype=dtype_optimization,
+            parse_dates=['time'],
+            date_format='%Y-%m-%d %H:%M:%S'
+        )
 
         output_directory = folder_utils.find_folder(
             country, data_folder, data_category, output_folder
         )
 
+        ds_list = []
         with tqdm(merged_dask_df_iter) as t:
             for merged_dask_df in t:
                 # Convert the chunk to an xarray dataset
-                ds_in = xr.DataArray(merged_dask_df['t2m'],
-                                     coords=[merged_dask_df['latitude'], merged_dask_df['longitude'],
-                                             merged_dask_df['time']],
-                                     dims=['latitude', 'longitude', 'time'])
-
-                # Delete the merged_dask_df to free up memory
-                del merged_dask_df
-
-                ds_in = ds_in.sel(
-                    latitude=slice(58, 50),
-                    longitude=slice(-6, 2),
+                ds = xr.DataArray(
+                    merged_dask_df['t2m'],
+                    coords=[merged_dask_df['latitude'], merged_dask_df['longitude'], merged_dask_df['time']],
+                    dims=['latitude', 'longitude', 'time']
                 )
 
-                ddeg_out_lat = 0.25
-                ddeg_out_lon = 0.125
+                # 3. Memory cleanup
+                del merged_dask_df
+                gc.collect()
 
-                # Regrid
-                ds_out = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
+                ds_list.append(ds)
 
-                # Delete ds_in to free up memory
-                del ds_in
+        # Combine chunks into one large dataset
+        combined_ds = xr.concat(ds_list, dim='time')
 
-                # Split and save by year
-                years = ds_out["time.year"].unique().values
+        # Further processing
+        combined_ds = combined_ds.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
+        ddeg_out_lat = 0.25
+        ddeg_out_lon = 0.125
+        regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
+        del combined_ds
+        gc.collect()
 
-                with tqdm(years) as t_years:
-                    for year in t_years:
-                        year_ds = ds_out.sel(time=str(year))
-                        output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
-                        output_filepath = os.path.join(output_directory, output_filename_nc)
-                        year_ds.to_netcdf(output_filepath)
-                        print(f"{output_filename_nc} saved !")
+        # 4. xarray-specific optimizations
+        years = regridded_ds["time.year"].unique().values
+        with tqdm(years) as t_years:
+            for year in t_years:
+                year_ds = regridded_ds.sel(time=str(year))
+                output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
+                output_filepath = os.path.join(output_directory, output_filename_nc)
+                year_ds.to_netcdf(output_filepath)
+                print(f"{output_filename_nc} saved !")
 
-                # Delete ds_out to free up memory before the next loop iteration
-                del ds_out
+        # 3. Memory cleanup at the end
+        del regridded_ds
+        gc.collect()
 
-        return True  # Return True if the operation was successful
+        return True
 
     except Exception as e:
         print(f"Error processing and saving data: {e}")
