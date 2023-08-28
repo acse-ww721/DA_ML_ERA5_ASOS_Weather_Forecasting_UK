@@ -3,8 +3,9 @@ import pandas as pd
 from tqdm import tqdm
 from datetime import datetime, timedelta
 from utils import folder_utils
+from era5_preprocessing import get_era5_list, cutoff_ds, merge_ds_by_year, regrid
 
-"""V3"""
+"""V4"""
 
 
 def get_csv_list(country, data_folder, data_category, output_folder):
@@ -148,37 +149,6 @@ def process_asos_rawdata(raw_df):
     return processed_df
 
 
-def merge_csv_station(country, data_folder, data_category, output_folder):
-    # Find csvs
-    input_folder = folder_utils.find_folder(
-        country, data_folder, data_category, output_folder
-    )
-    station_network_csv = "GB__asos_station_network.csv"
-    asos_data_csv = "GB_ASOS_processed_data_lite.csv"
-    station_network_csv_path = os.path.join(input_folder, station_network_csv)
-    asos_data_csv_path = os.path.join(input_folder, asos_data_csv)
-
-    # Read csvs
-    station_id_df = pd.read_csv(station_network_csv_path)
-    station_info_df = pd.read_csv(asos_data_csv_path)
-
-    columns_to_drop = [
-        "Country",
-        "Network",
-        "Archive_Begin",
-        "Archive_End",
-        "Time_Domain",
-    ]
-
-    station_id_df = station_id_df.drop(columns=columns_to_drop)
-    station_id_df.rename(columns={"ID": "station"}, inplace=True)
-
-    # Merge by "STATION"
-    merged_df = pd.merge(station_id_df, station_info_df, on="station", how="left")
-
-    return merged_df
-
-
 def save_asos_processed_data(
     processed_df, station, country, data_folder, data_category, output_folder
 ):
@@ -191,6 +161,92 @@ def save_asos_processed_data(
     print(f"{output_filename} done!")
 
 
+def merge_csv_station(country, data_folder, data_category, output_folder):
+    """Merge all csv files in the folder and add station latlon information"""
+
+    # Process station_network
+    input_folder = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    station_network_csv = "GB__asos_station_network.csv"
+    station_network_csv_path = os.path.join(input_folder, station_network_csv)
+
+    # Read station network CSV
+    station_id_df = pd.read_csv(station_network_csv_path)
+
+    columns_to_keep = [
+        "ID",
+        "Latitude",
+        "Logitude",
+    ]
+
+    station_id_df = station_id_df[columns_to_keep]
+    rename_mapping = {
+        "ID": "station",
+        "Latitude": "latitude",
+        "Logitude": "longitude",  # Fixed the typo
+    }
+
+    station_id_df.rename(columns=rename_mapping, inplace=True)
+
+    # Process station_info_dataframe
+    # asos_data_csv = "GB_ASOS_processed_data_lite.csv"
+    # asos_data_csv_path = os.path.join(input_folder, asos_data_csv)
+    # station_info_df = pd.read_csv(asos_data_csv_path)
+
+    # Iterate through CSV files in the folder
+    for filename in tqdm(os.listdir(input_folder)):
+        if filename.startswith("GB_ASOS_") and filename.endswith("_processed_data.csv"):
+            csv_path = os.path.join(input_folder, filename)
+
+            # Read the CSV file
+            station_info_df = pd.read_csv(csv_path)
+
+            # Merge data based on "station" column
+            merged_df = pd.merge(
+                station_id_df, station_info_df, on="station", how="left"
+            )
+            # Append the merged data to the final DataFrame
+            merged_df = merged_df.append(merged_df, ignore_index=True)
+
+    desired_order = ["latitude", "longitude", "time", "t2m", "station"]
+    merged_df = merged_df[desired_order]
+    return merged_df
+
+
+def csv_to_nc4(merged_df, country, data_folder, data_category, output_folder):
+    """Convert the merged CSV file to netCDF4 format by year"""
+    # Convert the DataFrame to xarray dataset
+    ds_in = merged_df.to_xarray()
+
+    ds_in.sel(
+        latitude=slice(58, 50),  # Reversed latitudes due to the era5 settings
+        longitude=slice(-6, 2),
+    )
+    ddeg_out_lat = 0.25
+    ddeg_out_lon = 0.125
+    ds_out = regrid(
+        ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False
+    )
+
+    # Save the dataset as netCDF4 format
+    # ds.to_netcdf("GB_ASOS_processed_data_uk.nc")
+    # print("GB_ASOS_processed_data_uk.nc saved!")
+
+    output_directory = folder_utils.create_folder(
+        country, data_folder, data_category, output_folder
+    )
+
+    # Split and save by year
+    years = ds_out["time.year"].unique()
+    for year in tqdm(years):
+        year_ds = ds_out.sel(time=str(year))
+        output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
+        output_filepath = os.path.join(output_directory, output_filename_nc)
+        year_ds.to_netcdf(output_filepath)
+        print(f"{output_filename_nc} saved !")
+
+
 # Example usage
 
 country = "GB"
@@ -200,6 +256,7 @@ data_test_category = "test_data"
 data_save_category = "processed_data"
 output_folder = "ASOS_DATA"
 
+################ Process ASOS raw data ################
 csv_list, station_list = get_csv_list(
     country, data_folder, data_read_category, output_folder
 )
@@ -220,3 +277,9 @@ for csv_path, station in tqdm(zip(csv_list, station_list)):
     except Exception as e:
         print(f"An error occurred for {csv_path}: {e}")
         continue  # Continue to the next iteration
+
+############### Make the same format as era5 dataset including cutoff and regrid ##################
+
+# Merge all csv files in the folder and add station latlon information
+merged_df = merge_csv_station(country, data_folder, data_save_category, output_folder)
+csv_to_nc4(merged_df, country, data_folder, data_save_category, output_folder)
