@@ -253,15 +253,23 @@ def save_asos_merged_data(
 def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year."""
     try:
+        # Function to process each partition to xarray DataArray
+        def process_partition_to_xarray(df_partition):
+            ds = xr.DataArray(
+                df_partition['t2m'],
+                coords=[df_partition['latitude'], df_partition['longitude'], df_partition['time']],
+                dims=['latitude', 'longitude', 'time']
+            )
+            return ds
+
         # 1. Use Dask's lazy computation strategy.
         chunksize = 200_000
         dtype_optimization = {
-            't2m': 'float32',  # as era5 setting
-            'latitude': 'float64',  # Optimize to float32 if sufficient.
-            'longitude': 'float64',  # Optimize to float32 if sufficient.
+            't2m': 'float32',
+            'latitude': 'float64',
+            'longitude': 'float64',
         }
 
-        # 2. Adjust chunk size
         merged_dask_df_iter = dd.read_csv(
             merged_csv_path,
             blocksize=chunksize,
@@ -274,21 +282,8 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
             country, data_folder, data_category, output_folder
         )
 
-        ds_list = []
-        with tqdm(merged_dask_df_iter) as t:
-            for merged_dask_df in t:
-                # Convert the chunk to an xarray dataset
-                ds = xr.DataArray(
-                    merged_dask_df['t2m'],
-                    coords=[merged_dask_df['latitude'], merged_dask_df['longitude'], merged_dask_df['time']],
-                    dims=['latitude', 'longitude', 'time']
-                )
-
-                # 3. Memory cleanup
-                del merged_dask_df
-                gc.collect()
-
-                ds_list.append(ds)
+        # Convert Dask DataFrame partitions to xarray and compute the result
+        ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray).compute().tolist()
 
         # Combine chunks into one large dataset
         combined_ds = xr.concat(ds_list, dim='time')
@@ -297,22 +292,21 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
         combined_ds = combined_ds.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
         ddeg_out_lat = 0.25
         ddeg_out_lon = 0.125
-        # regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False) # should regrid by year not at the whole ds
-        del combined_ds
-        gc.collect()
+        # regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
+        years = combined_ds["time.year"].unique().values
 
-        # 4. xarray-specific optimizations
-        years = regridded_ds["time.year"].unique().values
+
+
         with tqdm(years) as t_years:
             for year in t_years:
-                year_ds = regridded_ds.sel(time=str(year))
-                output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
+                year_ds = combined_ds.sel(time=str(year))
+                output_filename_nc = f"{country}_ASOS_bf_regrid_data_{year}.nc"
                 output_filepath = os.path.join(output_directory, output_filename_nc)
                 year_ds.to_netcdf(output_filepath)
                 print(f"{output_filename_nc} saved !")
 
-        # 3. Memory cleanup at the end
-        del regridded_ds
+        # Memory cleanup
+        del combined_ds
         gc.collect()
 
         return True
