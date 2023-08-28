@@ -287,15 +287,10 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
             country, data_folder, data_category, output_folder
         )
 
-        meta = xr.Dataset({
-            't2m': (['latitude', 'longitude', 'time'], np.array([[[0.]]]), {
-                'latitude': np.array([0.]),
-                'longitude': np.array([0.]),
-                'time': np.array([pd.Timestamp('2000-01-01')])}),
-            'latitude': (['latitude'], np.array([0.])),
-            'longitude': (['longitude'], np.array([0.])),
-            'time': (['time'], np.array([pd.Timestamp('2000-01-01')]))
-        })
+        meta = xr.DataArray(np.array([[[0.]]]),
+                            coords={'latitude': [0.], 'longitude': [0.], 'time': [pd.Timestamp('2000-01-01')]},
+                            dims=['latitude', 'longitude', 'time'],
+                            name='t2m')
 
         # Convert Dask DataFrame partitions to xarray and compute the result
         ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray,meta=meta).compute().tolist()
