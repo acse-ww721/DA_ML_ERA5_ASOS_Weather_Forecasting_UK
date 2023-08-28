@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from utils import folder_utils
 from era5_preprocessing import regrid
 
-"""V8"""
+"""V15"""
 
 
 def get_csv_list(country, data_folder, data_category, output_folder):
@@ -227,8 +227,21 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         # Drop duplicates based on time, latitude, and longitude
         merged_df_all = merged_df_all.drop_duplicates(subset=['time', 'latitude', 'longitude'])
 
+        # After merging all the dataframes and dropping duplicates:
+        # Convert 'time' column to datetime type
+        merged_df_all['time'] = pd.to_datetime(merged_df_all['time']) # re-ensure the dtype
+
+        # Group by year
+        grouped = merged_df_all.groupby(merged_df_all['time'].dt.year)
+
+        # Save each group as a CSV
+        for year, group in tqdm(grouped):
+            output_filename = f"{country}_merged_ASOS_{year}.csv"
+            output_path = os.path.join(output_folder, output_filename)
+            group.to_csv(output_path, index=False)
+            print(f"{output_filename} saved!")
+
         del merged_df_list  # Further release memory
-        return merged_df_all
 
     except Exception as e:
         print(f"Error processing files: {e}")
