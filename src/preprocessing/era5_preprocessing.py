@@ -89,7 +89,7 @@ def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
 
 # The regrid() function implementation below is a modification based on WeatherBench's GitHub code
 # Original code link: https://github.com/pangeo-data/WeatherBench/blob/master/src/regrid.py
-def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=True):
+def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False):
     """
     Regrid horizontally (longitude direction).
     :param ds_in: Input xarray dataset

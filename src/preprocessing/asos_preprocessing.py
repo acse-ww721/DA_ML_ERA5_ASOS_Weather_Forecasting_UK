@@ -238,18 +238,23 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         output_directory = folder_utils.find_folder(
             country, data_folder, data_category, output_folder
         )
+        year_list = []
         for year, group in tqdm(grouped):
             year =year.astype(int)
             output_filename = f"{country}_merged_ASOS_{year}.csv"
             output_path = os.path.join(output_directory, output_filename)
             group.to_csv(output_path, index=False, encoding="utf-8")
+            year_list.append(year)
             print(f"{output_path} saved!")
 
         del merged_df_list  # Further release memory
 
+        return year_list
     except Exception as e:
         print(f"Error processing files: {e}")
         return None
+
+
 
 # def save_asos_merged_data(
 #     merged_df, country, data_folder, data_category, output_folder
@@ -263,82 +268,108 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
 #     print(f"{output_filename} done!")
 #     return output_filepath
 
-# def custom_date_parser(x):
-#     if pd.isna(x):
-#         return pd.NaT
-#     return pd.to_datetime(x, format='%Y-%m-%d %H:%M:%S')
 
-def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
+def get_asos_year_list(country, data_folder, data_category, output_folder):
+    input_folder_path = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    csv_files = [
+        f for f in os.listdir(input_folder_path) if f.endswith(".csv") and "_merged_ASOS_" in f
+    ]
+    return [
+        os.path.join(input_folder_path, csv_file) for csv_file in csv_files
+    ]  # list for asos year files path
+
+
+def csv_to_nc4(merged_csv_path,year, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year."""
-    try:
-        # Function to process each partition to xarray Dataset
-        def process_partition_to_xarray(df_partition):
-            data_vars = {
-                't2m': df_partition['t2m'].values
-            }
-            coords = {
-                'latitude': df_partition['latitude'].values,
-                'longitude': df_partition['longitude'].values,
-                'time': df_partition['time'].values
-            }
-            ds = xr.Dataset(data_vars, coords=coords)
-            return ds
+    df = pd.read_csv(merged_csv_path)
+    ds_in = xr.Dataset.from_dataframe(df.set_index(['latitude', 'longitude', 'time']))
+    ds_in = ds_in.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
+    ddeg_out_lat = 0.25
+    ddeg_out_lon = 0.125
+    regridded_ds = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
 
-        # 1. Use Dask's lazy computation strategy.
-        chunksize = 200_000
-        dtype_optimization = {
-            't2m': 'float32',
-            'latitude': 'float64',
-            'longitude': 'float64',
-        }
+    output_directory = folder_utils.find_folder(country,data_folder,data_category,output_folder)
+    output_filename = f"{country}_ASOS_regird_{year}.nc"
+    output_path = os.path.join(output_directory, output_filename)
+    regridded_ds.to_netcdf(output_path)
+    print(f"{output_filename} done!")
 
-        merged_dask_df_iter = dd.read_csv(
-            merged_csv_path,
-            blocksize=chunksize,
-            dtype=dtype_optimization,
-            parse_dates=['time'],
-            date_format='%Y-%m-%d %H:%M:%S'
-        )
 
-        output_directory = folder_utils.find_folder(
-            country, data_folder, data_category, output_folder
-        )
 
-        meta = xr.DataArray(np.array([[[0.]]]),
-                            coords={'latitude': [0.], 'longitude': [0.], 'time': [pd.Timestamp('2000-01-01')]},
-                            dims=['latitude', 'longitude', 'time'],
-                            name='t2m')
 
-        # Convert Dask DataFrame partitions to xarray and compute the result
-        ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray,meta=meta).compute().tolist()
-
-        # Combine chunks into one large dataset
-        combined_ds = xr.concat(ds_list, dim='index')
-
-        # Further processing
-        combined_ds = combined_ds.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
-        ddeg_out_lat = 0.25
-        ddeg_out_lon = 0.125
-        # regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
-        years = combined_ds["time.year"].unique().values
-
-        with tqdm(years) as t_years:
-            for year in t_years:
-                year_ds = combined_ds.sel(time=str(year))
-                output_filename_nc = f"{country}_ASOS_bf_regrid_data_{year}.nc"
-                output_filepath = os.path.join(output_directory, output_filename_nc)
-                year_ds.to_netcdf(output_filepath)
-                print(f"{output_filename_nc} saved !")
-
-        # Memory cleanup
-        del combined_ds
-        gc.collect()
-
-        return True
-
-    except Exception as e:
-        print(f"Error processing and saving data: {e}")
-        return False
+# def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
+#     """Convert the merged CSV file to netCDF4 format by year."""
+#     try:
+#         # Function to process each partition to xarray Dataset
+#         def process_partition_to_xarray(df_partition):
+#             data_vars = {
+#                 't2m': df_partition['t2m'].values
+#             }
+#             coords = {
+#                 'latitude': df_partition['latitude'].values,
+#                 'longitude': df_partition['longitude'].values,
+#                 'time': df_partition['time'].values
+#             }
+#             ds = xr.Dataset(data_vars, coords=coords)
+#             return ds
+#
+#         # 1. Use Dask's lazy computation strategy.
+#         chunksize = 200_000
+#         dtype_optimization = {
+#             't2m': 'float32',
+#             'latitude': 'float64',
+#             'longitude': 'float64',
+#         }
+#
+#         merged_dask_df_iter = dd.read_csv(
+#             merged_csv_path,
+#             blocksize=chunksize,
+#             dtype=dtype_optimization,
+#             parse_dates=['time'],
+#             date_format='%Y-%m-%d %H:%M:%S'
+#         )
+#
+#         output_directory = folder_utils.find_folder(
+#             country, data_folder, data_category, output_folder
+#         )
+#
+#         meta = xr.DataArray(np.array([[[0.]]]),
+#                             coords={'latitude': [0.], 'longitude': [0.], 'time': [pd.Timestamp('2000-01-01')]},
+#                             dims=['latitude', 'longitude', 'time'],
+#                             name='t2m')
+#
+#         # Convert Dask DataFrame partitions to xarray and compute the result
+#         ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray,meta=meta).compute().tolist()
+#
+#         # Combine chunks into one large dataset
+#         combined_ds = xr.concat(ds_list, dim='index')
+#
+#         # Further processing
+#         combined_ds = combined_ds.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
+#         ddeg_out_lat = 0.25
+#         ddeg_out_lon = 0.125
+#         # regridded_ds = regrid(combined_ds, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
+#         years = combined_ds["time.year"].unique().values
+#
+#         with tqdm(years) as t_years:
+#             for year in t_years:
+#                 year_ds = combined_ds.sel(time=str(year))
+#                 output_filename_nc = f"{country}_ASOS_bf_regrid_data_{year}.nc"
+#                 output_filepath = os.path.join(output_directory, output_filename_nc)
+#                 year_ds.to_netcdf(output_filepath)
+#                 print(f"{output_filename_nc} saved !")
+#
+#         # Memory cleanup
+#         del combined_ds
+#         gc.collect()
+#
+#         return True
+#
+#     except Exception as e:
+#         print(f"Error processing and saving data: {e}")
+#         return False
 
 
 
@@ -376,6 +407,8 @@ for csv_path, station in tqdm(zip(csv_list, station_list)):
 ############### Make the same format as era5 dataset including cutoff and regrid ##################
 
 # Merge all csv files in the folder and add station latlon information
-merged_df = merge_csv_station(country, data_folder, data_save_category, output_folder)
-merged_csv_path = save_asos_merged_data(merged_df,country,data_folder,data_save_category, output_folder)
-csv_to_nc4(merged_csv_path, country, data_folder, data_save_category, output_folder)
+year_list = merge_csv_station(country, data_folder, data_save_category, output_folder)
+csv_paths = get_csv_list(country,data_folder,data_save_category,output_folder)
+for year,csv_path in zip(year_list,csv_paths):
+    csv_to_nc4(csv_path,year,country,data_folder,data_save_category,output_folder)
+
