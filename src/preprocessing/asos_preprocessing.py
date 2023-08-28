@@ -254,15 +254,17 @@ def save_asos_merged_data(
 def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year."""
     try:
-        # Function to process each partition to xarray DataArray
+        # Function to process each partition to xarray Dataset
         def process_partition_to_xarray(df_partition):
-            data = df_partition[['t2m']].to_numpy()
+            data_vars = {
+                't2m': df_partition['t2m'].values
+            }
             coords = {
                 'latitude': df_partition['latitude'].values,
                 'longitude': df_partition['longitude'].values,
                 'time': df_partition['time'].values
             }
-            ds = xr.DataArray(data, coords=coords, dims=list(coords.keys()))
+            ds = xr.Dataset(data_vars, coords=coords)
             return ds
 
         # 1. Use Dask's lazy computation strategy.
@@ -286,13 +288,10 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
         )
 
         # Convert Dask DataFrame partitions to xarray and compute the result
-        meta = xr.DataArray(np.array([0.]),
-                            coords={'latitude': [0.], 'longitude': [0.], 'time': [pd.Timestamp('2000-01-01')]},
-                            dims=['latitude', 'longitude', 'time'])
-        ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray, meta=meta).compute().tolist()
+        ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray).compute().tolist()
 
         # Combine chunks into one large dataset
-        combined_ds = xr.concat(ds_list, dim='time')
+        combined_ds = xr.concat(ds_list, dim='index')
 
         # Further processing
         combined_ds = combined_ds.sel(latitude=slice(58, 50), longitude=slice(-6, 2))
@@ -318,6 +317,7 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
     except Exception as e:
         print(f"Error processing and saving data: {e}")
         return False
+
 
 
 # Example usage
