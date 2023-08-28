@@ -256,15 +256,16 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
     try:
         # Function to process each partition to xarray Dataset
         def process_partition_to_xarray(df_partition):
-            data = df_partition['t2m'].values
+            data_vars = {
+                't2m': df_partition['t2m'].values
+            }
             coords = {
                 'latitude': df_partition['latitude'].values,
                 'longitude': df_partition['longitude'].values,
                 'time': df_partition['time'].values
             }
-            # Using the DataArray structure here for 't2m' and then converting it to a Dataset
-            da = xr.DataArray(data, coords=coords, dims=list(coords.keys()), name='t2m')
-            return da.to_dataset()
+            ds = xr.Dataset(data_vars, coords=coords)
+            return ds
 
         # 1. Use Dask's lazy computation strategy.
         chunksize = 200_000
@@ -286,8 +287,18 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
             country, data_folder, data_category, output_folder
         )
 
+        meta = xr.Dataset({
+            't2m': (['latitude', 'longitude', 'time'], np.array([[[0.]]]), {
+                'latitude': np.array([0.]),
+                'longitude': np.array([0.]),
+                'time': np.array([pd.Timestamp('2000-01-01')])}),
+            'latitude': (['latitude'], np.array([0.])),
+            'longitude': (['longitude'], np.array([0.])),
+            'time': (['time'], np.array([pd.Timestamp('2000-01-01')]))
+        })
+
         # Convert Dask DataFrame partitions to xarray and compute the result
-        ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray).compute().tolist()
+        ds_list = merged_dask_df_iter.map_partitions(process_partition_to_xarray,meta=meta).compute().tolist()
 
         # Combine chunks into one large dataset
         combined_ds = xr.concat(ds_list, dim='index')
