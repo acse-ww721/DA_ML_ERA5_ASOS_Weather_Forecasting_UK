@@ -1,12 +1,13 @@
 import os
 import pandas as pd
 import xarray as xr
+import dask.dataframe as dd
 from tqdm import tqdm
 from datetime import datetime, timedelta
 from utils import folder_utils
-from era5_preprocessing import get_era5_list, cutoff_ds, merge_ds_by_year, regrid
+from era5_preprocessing import regrid
 
-"""V5"""
+"""V6"""
 
 
 def get_csv_list(country, data_folder, data_category, output_folder):
@@ -219,6 +220,8 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         merged_df_all = pd.concat(merged_df_list, ignore_index=True)
         desired_order = ["latitude", "longitude", "time", "t2m"]
         merged_df_all = merged_df_all[desired_order]
+        # Drop duplicates based on time, latitude, and longitude
+        merged_df_all = merged_df_all.drop_duplicates(subset=['time', 'latitude', 'longitude'])
 
         del merged_df_list  # Further release memory
         return merged_df_all
