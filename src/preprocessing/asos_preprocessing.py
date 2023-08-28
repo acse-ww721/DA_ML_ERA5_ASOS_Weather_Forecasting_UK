@@ -244,6 +244,10 @@ def save_asos_merged_data(
     print(f"{output_filename} done!")
     return output_filepath
 
+# def custom_date_parser(x):
+#     if pd.isna(x):
+#         return pd.NaT
+#     return pd.to_datetime(x, format='%Y-%m-%d %H:%M:%S')
 
 def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
     """Convert the merged CSV file to netCDF4 format by year"""
@@ -254,48 +258,53 @@ def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_fold
             't2m': 'float32',  # as era5 setting
             'latitude': 'float64',
             'longitude': 'float64',
-            'time': 'datetime64[ns]'
+            # 'time': 'datetime64[ns]'
         }
-        merged_dask_df_iter = dd.read_csv(merged_csv_path, blocksize=chunksize, dtype=dtype_optimization, parse_dates=['time'])
+        merged_dask_df_iter = dd.read_csv(merged_csv_path, blocksize=chunksize, dtype=dtype_optimization,
+                                          parse_dates=['time'], date_format='%Y-%m-%d %H:%M:%S')
 
         output_directory = folder_utils.find_folder(
             country, data_folder, data_category, output_folder
         )
 
-        for merged_dask_df in tqdm(merged_dask_df_iter):
-            # Convert the chunk to an xarray dataset
-            ds_in = xr.DataArray(merged_dask_df['t2m'], coords=[merged_dask_df['latitude'], merged_dask_df['longitude'],
-                                                                merged_dask_df['time']],
-                                 dims=['latitude', 'longitude', 'time'])
+        with tqdm(merged_dask_df_iter) as t:
+            for merged_dask_df in t:
+                # Convert the chunk to an xarray dataset
+                ds_in = xr.DataArray(merged_dask_df['t2m'],
+                                     coords=[merged_dask_df['latitude'], merged_dask_df['longitude'],
+                                             merged_dask_df['time']],
+                                     dims=['latitude', 'longitude', 'time'])
 
-            # Delete the merged_dask_df to free up memory
-            del merged_dask_df
+                # Delete the merged_dask_df to free up memory
+                del merged_dask_df
 
-            ds_in = ds_in.sel(
-                latitude=slice(58, 50),
-                longitude=slice(-6, 2),
-            )
+                ds_in = ds_in.sel(
+                    latitude=slice(58, 50),
+                    longitude=slice(-6, 2),
+                )
 
-            ddeg_out_lat = 0.25
-            ddeg_out_lon = 0.125
+                ddeg_out_lat = 0.25
+                ddeg_out_lon = 0.125
 
-            # Regrid
-            ds_out = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
+                # Regrid
+                ds_out = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False)
 
-            # Delete ds_in to free up memory
-            del ds_in
+                # Delete ds_in to free up memory
+                del ds_in
 
-            # Split and save by year
-            years = ds_out["time.year"].unique().values
-            for year in tqdm(years):
-                year_ds = ds_out.sel(time=str(year))
-                output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
-                output_filepath = os.path.join(output_directory, output_filename_nc)
-                year_ds.to_netcdf(output_filepath)
-                print(f"{output_filename_nc} saved !")
+                # Split and save by year
+                years = ds_out["time.year"].unique().values
 
-            # Delete ds_out to free up memory before the next loop iteration
-            del ds_out
+                with tqdm(years) as t_years:
+                    for year in t_years:
+                        year_ds = ds_out.sel(time=str(year))
+                        output_filename_nc = f"{country}_ASOS_regrid_data_{year}.nc"
+                        output_filepath = os.path.join(output_directory, output_filename_nc)
+                        year_ds.to_netcdf(output_filepath)
+                        print(f"{output_filename_nc} saved !")
+
+                # Delete ds_out to free up memory before the next loop iteration
+                del ds_out
 
         return True  # Return True if the operation was successful
 
