@@ -235,11 +235,15 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         grouped = merged_df_all.groupby(merged_df_all['time'].dt.year)
 
         # Save each group as a CSV
+        output_directory = folder_utils.find_folder(
+            country, data_folder, data_category, output_folder
+        )
         for year, group in tqdm(grouped):
+            year =year.astype(int)
             output_filename = f"{country}_merged_ASOS_{year}.csv"
-            output_path = os.path.join(output_folder, output_filename)
-            group.to_csv(output_path, index=False)
-            print(f"{output_filename} saved!")
+            output_path = os.path.join(output_directory, output_filename)
+            group.to_csv(output_path, index=False, encoding="utf-8")
+            print(f"{output_path} saved!")
 
         del merged_df_list  # Further release memory
 
@@ -247,17 +251,17 @@ def merge_csv_station(country, data_folder, data_category, output_folder):
         print(f"Error processing files: {e}")
         return None
 
-def save_asos_merged_data(
-    merged_df, country, data_folder, data_category, output_folder
-):
-    output_directory = folder_utils.find_folder(
-        country, data_folder, data_category, output_folder
-    )
-    output_filename = f"{country}_ASOS_merged_data.csv"
-    output_filepath = os.path.join(output_directory, output_filename)
-    merged_df.to_csv(output_filepath, index=False, encoding="utf-8")
-    print(f"{output_filename} done!")
-    return output_filepath
+# def save_asos_merged_data(
+#     merged_df, country, data_folder, data_category, output_folder
+# ):
+#     output_directory = folder_utils.find_folder(
+#         country, data_folder, data_category, output_folder
+#     )
+#     output_filename = f"{country}_ASOS_merged_data.csv"
+#     output_filepath = os.path.join(output_directory, output_filename)
+#     merged_df.to_csv(output_filepath, index=False, encoding="utf-8")
+#     print(f"{output_filename} done!")
+#     return output_filepath
 
 # def custom_date_parser(x):
 #     if pd.isna(x):
