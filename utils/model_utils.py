@@ -11,7 +11,9 @@ def get_initial_weights_torch(output_size):
     # Initialize the weights to zero
     W = np.zeros((output_size, 6), dtype="float32")
     W = torch.tensor(W, dtype=torch.float)
-    b = torch.tensor(b.flatten(), dtype=torch.float)
+    # b = torch.tensor(b.flatten(), dtype=torch.float)
+    b = torch.as_tensor(b.flatten(), dtype=torch.float) # Don't compute gradient for b when initializing weights
+
     return (W, b)
 
 
