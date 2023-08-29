@@ -9,9 +9,10 @@ def get_initial_weights_torch(output_size):
     b[1, 1] = 1
 
     # Initialize the weights to zero
-    W = torch.zeros(output_size, 6, dtype=torch.float32)
-
-    return W, b.view(-1)
+    W = np.zeros((output_size, 6), dtype="float32")
+    W = torch.tensor(W, dtype=torch.float)
+    b = torch.tensor(b.flatten(), dtype=torch.float)
+    return (W, b)
 
 
 # The function implementation below is a modification based on DDWP-DA's GitHub code

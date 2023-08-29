@@ -43,10 +43,6 @@ class STN(nn.Module):
             nn.ReLU(),
         )
 
-        # Assuming you'll write the BilinearInterpolation layer in PyTorch
-        # For now, I've commented out the related lines.
-        # self.bilinear_interpolation = BilinearInterpolation(sampling_size)
-
         self.locnet = nn.Sequential(
             nn.Flatten(),
             nn.Linear(32 * self.sampling_size[0] * self.sampling_size[1], 500),
@@ -57,9 +53,17 @@ class STN(nn.Module):
             nn.ReLU(),
             nn.Linear(100, 50),
             nn.ReLU(),
-            # Initialize weights here if necessary
-            nn.Linear(50, 6, model_utils.get_initial_weights(6)),
+            # Initialize weights here if necessary_
+            nn.Linear(50, 6),
         )
+
+        # Initialize the weights of the last Linear layer
+        (
+            self.locnet[-1].weight.data,
+            self.locnet[-1].bias.data,
+        ) = model_utils.get_initial_weights_torch(50)
+
+        self.bilinear_interpolation = BilinearInterpolation(self.sampling_size)
 
         self.upconv1 = nn.Sequential(
             nn.Conv2d(32, 32, kernel_size=2, padding=1), nn.ReLU()  # up6
