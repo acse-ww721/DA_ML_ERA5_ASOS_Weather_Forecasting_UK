@@ -7,7 +7,7 @@ import dask
 from utils import folder_utils
 from tqdm import tqdm
 
-"""V4 
+"""
 Running on the Windows 11 system
 because xesmf is not supported on M1 Silicon Mac
 
@@ -152,6 +152,30 @@ def save_regridded_era5(
     print(f"Regridded data for {year} saved as {output_filename}")
 
 
+def extract_T850_compute_mean_std(country, data_folder, data_category, output_folder,start_year=1979, end_year=2020):
+    # era5_pressure_level_2022_regrid_850.nc
+    input_folder_path = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    nc_files = [
+        os.path.join(input_folder_path, f)
+        for f in os.listdir(input_folder_path)
+        if f.endswith(".nc") and "regrid_850" in f
+        and start_year <= int(f.split('_')[3]) <= end_year
+    ]
+    ds = xr.open_mfdataset(nc_files, combine="by_coords")
+
+    # Extract t2m data
+    t2m_data = ds['t']
+
+    # Compute mean and std
+    t2m_data_flatten = t2m_data.values.flatten()
+    mean_t2m = np.nanmean(t2m_data_flatten)
+    std_t2m = np.nanstd(t2m_data_flatten)
+
+    return mean_t2m, std_t2m
+
+
 # Example usage
 
 country = "GB"
@@ -162,6 +186,8 @@ data_save_category = "processed_data"
 output_folder = "ERA5_DATA"
 ddeg_out_lat = 0.25
 ddeg_out_lon = 0.125
+
+##################################################################################
 
 # era5_list = []
 era5_list = get_era5_list(
@@ -175,7 +201,6 @@ merge_era5_list = get_era5_list(
     country, data_folder, data_save_category, output_folder
 )  # len = 44 (1979-2022)
 
-
 for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
     ds = xr.open_dataset(merged_ds_path)
     ds = cutoff_ds(merged_ds_path, 50, 58, -6, 2)
@@ -184,3 +209,6 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
         ds_out, year, country, data_folder, data_save_category, output_folder
     )
     ds.close()
+##################################################################################
+
+mean_t2m, std_t2m = extract_T850_compute_mean_std(country, data_folder, data_save_category, output_folder, start_year=1979, end_year=2020)
