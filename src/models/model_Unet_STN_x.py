@@ -55,7 +55,7 @@ class STN(nn.Module):
             nn.ReLU(),
             # Initialize weights here if necessary_
             nn.Linear(50, 6),
-        )
+        )  # The six-dimensional torch is the radial transformation parameter
 
         # Initialize the weights of the last Linear layer
         (
@@ -98,11 +98,12 @@ class STN(nn.Module):
         # Apply locnet to flattened x5
         theta = self.locnet(x5)
 
-        # You need to apply bilinear interpolation here with `theta`
-        # For now, I'll keep it as it is.
-        # x_transformed = self.bilinear_interpolation(x, theta)
+        # Use bilinear interpolation on x with `theta`
+        x_transformed = self.bilinear_interpolation(
+            x, theta
+        )  # x is the input image, theta is the transformation parameter
 
-        up6 = F.interpolate(x, scale_factor=2, mode="nearest")
+        up6 = F.interpolate(x_transformed, scale_factor=2, mode="nearest")
         up6 = self.upconv1(up6)
         up6 = torch.cat([up6, x2], 1)
         x6 = self.conv6(up6)
