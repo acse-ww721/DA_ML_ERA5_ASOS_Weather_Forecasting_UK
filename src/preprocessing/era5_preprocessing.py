@@ -152,7 +152,9 @@ def save_regridded_era5(
     print(f"Regridded data for {year} saved as {output_filename}")
 
 
-def extract_T850_compute_mean_std(country, data_folder, data_category, output_folder,start_year=1979, end_year=2020):
+def extract_T850_compute_mean_std(
+    country, data_folder, data_category, output_folder, start_year=1979, end_year=2020
+):
     # era5_pressure_level_2022_regrid_850.nc
     input_folder_path = folder_utils.find_folder(
         country, data_folder, data_category, output_folder
@@ -160,7 +162,8 @@ def extract_T850_compute_mean_std(country, data_folder, data_category, output_fo
     nc_files = [
         os.path.join(input_folder_path, f)
         for f in os.listdir(input_folder_path)
-        if f.endswith(".nc") and "regrid_850" in f
+        if f.endswith(".nc")
+        and "regrid_850" in f
         and start_year <= int(f.split('_')[3]) <= end_year
     ]
     ds = xr.open_mfdataset(nc_files, combine="by_coords")
@@ -168,10 +171,16 @@ def extract_T850_compute_mean_std(country, data_folder, data_category, output_fo
     # Extract t2m data
     t2m_data = ds['t']
 
-    # Compute mean and std
-    t2m_data_flatten = t2m_data.values.flatten()
-    mean_t2m = np.nanmean(t2m_data_flatten)
-    std_t2m = np.nanstd(t2m_data_flatten)
+    # Compute mean and std in chunks
+    mean_list = []
+    std_list = []
+    for chunk in tqdm(t2m_data):
+        chunk_flatten = chunk.values.flatten()
+        mean_list.append(np.nanmean(chunk_flatten))
+        std_list.append(np.nanstd(chunk_flatten))
+
+    mean_t2m = np.mean(mean_list)
+    std_t2m = np.mean(std_list)
 
     return mean_t2m, std_t2m
 
@@ -211,4 +220,11 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
     ds.close()
 ##################################################################################
 
-mean_t2m, std_t2m = extract_T850_compute_mean_std(country, data_folder, data_save_category, output_folder, start_year=1979, end_year=2020)
+mean_t2m, std_t2m = extract_T850_compute_mean_std(
+    country,
+    data_folder,
+    data_save_category,
+    output_folder,
+    start_year=1979,
+    end_year=2020,
+)
