@@ -156,33 +156,52 @@ def extract_T850_compute_mean_std(
     country, data_folder, data_category, output_folder, start_year=1979, end_year=2020
 ):
     # era5_pressure_level_2022_regrid_850.nc
-    input_folder_path = folder_utils.find_folder(
-        country, data_folder, data_category, output_folder
-    )
+    input_folder_path = folder_utils.find_folder(country, data_folder, data_category, output_folder)
     nc_files = [
         os.path.join(input_folder_path, f)
         for f in os.listdir(input_folder_path)
-        if f.endswith(".nc")
-        and "regrid_850" in f
-        and start_year <= int(f.split('_')[3]) <= end_year
+        if f.endswith(".nc") and "regrid_850" in f and start_year <= int(f.split('_')[3]) <= end_year
     ]
     ds = xr.open_mfdataset(nc_files, combine="by_coords")
 
-    # Extract t2m data
     t2m_data = ds['t']
 
-    # Compute mean and std in chunks
     mean_list = []
     std_list = []
+
     for chunk in tqdm(t2m_data):
         chunk_flatten = chunk.values.flatten()
-        mean_list.append(np.nanmean(chunk_flatten))
-        std_list.append(np.nanstd(chunk_flatten))
+
+        # Exclude NaN and zero values from calculation
+        valid_values = chunk_flatten[~np.isnan(chunk_flatten) & (chunk_flatten != 0)]
+
+        if len(valid_values) > 0:
+            mean_list.append(np.nanmean(valid_values))
+            std_list.append(np.nanstd(valid_values))
 
     mean_t2m = np.mean(mean_list)
     std_t2m = np.mean(std_list)
 
     return mean_t2m, std_t2m
+
+def fill_nan(Z):
+    for t in tqdm(range(Z.shape[0])):
+        for i in range(Z.shape[1]):
+            for j in range(1, Z.shape[2] - 1):  # 避免越界，从1开始，到-2结束
+                if np.isnan(Z[t, i, j]):
+                    prev_val = Z[t, i, j - 1]
+                    next_val = Z[t, i, j + 1]
+
+                    # 只有前后都不是nan才进行填充
+                    if not np.isnan(prev_val) and not np.isnan(next_val):
+                        Z[t, i, j] = (prev_val + next_val) / 2
+                    # 如果前一个值不是nan，则使用前一个值填充
+                    elif not np.isnan(prev_val):
+                        Z[t, i, j] = prev_val
+                    # 如果后一个值不是nan，则使用后一个值填充
+                    elif not np.isnan(next_val):
+                        Z[t, i, j] = next_val
+            Z[t, i, -1] = Z[t, i, -2]
 
 
 # Example usage
