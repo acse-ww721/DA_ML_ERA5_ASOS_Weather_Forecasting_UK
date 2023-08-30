@@ -184,21 +184,38 @@ def extract_T850_compute_mean_std(
 
     return mean_t2m, std_t2m
 
-def fill_nan(Z):
+
+def fill_nan_new(Z):
     for t in tqdm(range(Z.shape[0])):
         for i in range(Z.shape[1]):
-            for j in range(1, Z.shape[2] - 1):  # 避免越界，从1开始，到-2结束
+
+            # Process the start nan of the array
+            start = 0
+            while start < Z.shape[2] and np.isnan(Z[t, i, start]):
+                start += 1
+            for j in range(start):
+                Z[t, i, j] = Z[t, i, start] if start < Z.shape[2] else np.nan
+
+            # Process the end nan of the array
+            end = Z.shape[2] - 1
+            while end >= 0 and np.isnan(Z[t, i, end]):
+                end -= 1
+            for j in range(end + 1, Z.shape[2]):
+                Z[t, i, j] = Z[t, i, end] if end >= 0 else np.nan
+
+            # Process the middle nan of the array
+            for j in range(1, Z.shape[2] - 1):  # avoid the start and end
                 if np.isnan(Z[t, i, j]):
                     prev_val = Z[t, i, j - 1]
                     next_val = Z[t, i, j + 1]
 
-                    # 只有前后都不是nan才进行填充
+                    # only fill if both values are not nan
                     if not np.isnan(prev_val) and not np.isnan(next_val):
                         Z[t, i, j] = (prev_val + next_val) / 2
-                    # 如果前一个值不是nan，则使用前一个值填充
+                    # if previous value is not nan, use previous value to fill
                     elif not np.isnan(prev_val):
                         Z[t, i, j] = prev_val
-                    # 如果后一个值不是nan，则使用后一个值填充
+                    # if next value is not nan, use next value to fill
                     elif not np.isnan(next_val):
                         Z[t, i, j] = next_val
             Z[t, i, -1] = Z[t, i, -2]
@@ -236,7 +253,7 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list[0], year_list[0])):
     ds_out = regrid(ds, ddeg_out_lat, ddeg_out_lon)
     ds_out = ds_out.where((ds_out != 0) & ~np.isnan(ds_out), drop=True)
     ds_array = np.asarray(ds_out['t'])
-    filled_array=fill_nan(ds_array)
+    filled_array=fill_nan_new(ds_array)
     ds_out['t'] = xr.DataArray(filled_array, dims=ds_out['t'].dims, coords=ds_out['t'].coords)
 
     save_regridded_era5(
