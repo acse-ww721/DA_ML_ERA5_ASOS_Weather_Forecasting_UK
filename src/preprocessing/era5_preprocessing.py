@@ -230,10 +230,11 @@ merge_era5_list = get_era5_list(
     country, data_folder, data_save_category, output_folder
 )  # len = 44 (1979-2022)
 
-for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
-    ds = xr.open_dataset(merged_ds_path)
+for merged_ds_path, year in tqdm(zip(merge_era5_list[0], year_list[0])):
+    # ds = xr.open_dataset(merged_ds_path)
     ds = cutoff_ds(merged_ds_path, 50, 58, -6, 2)
     ds_out = regrid(ds, ddeg_out_lat, ddeg_out_lon)
+    ds_out = ds_out.where((ds_out != 0) & ~np.isnan(ds_out), drop=True)
     ds_array = np.asarray(ds_out['t'])
     filled_array=fill_nan(ds_array)
     ds_out['t'] = xr.DataArray(filled_array, dims=ds_out['t'].dims, coords=ds_out['t'].coords)
