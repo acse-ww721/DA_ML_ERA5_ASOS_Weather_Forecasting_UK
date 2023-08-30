@@ -202,6 +202,7 @@ def fill_nan(Z):
                     elif not np.isnan(next_val):
                         Z[t, i, j] = next_val
             Z[t, i, -1] = Z[t, i, -2]
+    return Z
 
 
 # Example usage
@@ -233,6 +234,9 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
     ds = xr.open_dataset(merged_ds_path)
     ds = cutoff_ds(merged_ds_path, 50, 58, -6, 2)
     ds_out = regrid(ds, ddeg_out_lat, ddeg_out_lon)
+    ds_array = np.asarray(ds_out['t'])
+    filled_array=fill_nan(ds_array)
+    ds_out['t'].data = filled_array
     save_regridded_era5(
         ds_out, year, country, data_folder, data_save_category, output_folder
     )
