@@ -236,7 +236,8 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list, year_list)):
     ds_out = regrid(ds, ddeg_out_lat, ddeg_out_lon)
     ds_array = np.asarray(ds_out['t'])
     filled_array=fill_nan(ds_array)
-    ds_out['t'].data = filled_array
+    ds_out['t'] = xr.DataArray(filled_array, dims=ds_out['t'].dims, coords=ds_out['t'].coords)
+
     save_regridded_era5(
         ds_out, year, country, data_folder, data_save_category, output_folder
     )
