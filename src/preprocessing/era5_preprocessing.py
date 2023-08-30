@@ -262,6 +262,7 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list[0], year_list[0])):
     ds.close()
 ##################################################################################
 
+
 mean_t2m, std_t2m = extract_T850_compute_mean_std(
     country,
     data_folder,
