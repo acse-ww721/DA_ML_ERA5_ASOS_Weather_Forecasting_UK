@@ -15,9 +15,10 @@ class BilinearInterpolation(nn.Module):
     [3] https://github.com/EderSantana/seya
     """
 
-    def __init__(self, output_size):
+    def __init__(self, output_size, device='cpu'):
         super(BilinearInterpolation, self).__init__()
         self.output_size = output_size
+        self.device = device
 
     def forward(self, X, affine_transformation):
         transformed = self._transform(X, affine_transformation)
@@ -100,8 +101,8 @@ class BilinearInterpolation(nn.Module):
         and add an array of all ones.
         Finally, we repeat this grid so that it matches the batch size.
         """
-        x_linspace = torch.linspace(-1.0, 1.0, width).float()
-        y_linspace = torch.linspace(-1.0, 1.0, height).float()
+        x_linspace = torch.linspace(-1.0, 1.0, width).float().to(self.device)
+        y_linspace = torch.linspace(-1.0, 1.0, height).float().to(self.device)
         # x_linspace = torch.linspace(-1.0, 1.0, width).float().to(image.device) # GPU
         # y_linspace = torch.linspace(-1.0, 1.0, height).float().to(image.device) # GPU
         x_coordinates, y_coordinates = torch.meshgrid(x_linspace, y_linspace)
