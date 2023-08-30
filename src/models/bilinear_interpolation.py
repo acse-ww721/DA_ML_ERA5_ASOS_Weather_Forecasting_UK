@@ -27,25 +27,37 @@ class BilinearInterpolation(nn.Module):
     def _interpolate(self, image, sampled_grids):
         # [B, H, W, C] this should be converted to [B, C, H, W] first to apply pytorch format
         # Convert [B, H, W, C] to [B, C, H, W]
-        image = image.permute(0, 3, 1, 2)
+        # image = image.permute(0, 3, 1, 2)
         batch_size, num_channels, height, width = image.shape
 
         x = (sampled_grids[:, 0, :] + 1) * width * 0.5
         y = (sampled_grids[:, 1, :] + 1) * height * 0.5
 
-        # Convert to integer part and floating part
-        x0 = torch.floor(x).int()
-        x1 = x0 + 1
-        y0 = torch.floor(y).int()
-        y1 = y0 + 1
+        # # Convert to integer part and floating part
+        # x0 = torch.floor(x).int()
+        # x1 = x0 + 1
+        # y0 = torch.floor(y).int()
+        # y1 = y0 + 1
+        #
+        # # Ensure within bounds
+        # max_x = width - 1
+        # max_y = height - 1
+        # x0 = torch.clamp(x0, 0, max_x)
+        # x1 = torch.clamp(x1, 0, max_x)
+        # y0 = torch.clamp(y0, 0, max_y)
+        # y1 = torch.clamp(y1, 0, max_y)
 
-        # Ensure within bounds
         max_x = width - 1
         max_y = height - 1
-        x0 = torch.clamp(x0, 0, max_x)
-        x1 = torch.clamp(x1, 0, max_x)
-        y0 = torch.clamp(y0, 0, max_y)
-        y1 = torch.clamp(y1, 0, max_y)
+
+        x0 = torch.floor(x).int()
+        y0 = torch.floor(y).int()
+
+        x0 = torch.clamp(x0, 0, max_x - 1)
+        y0 = torch.clamp(y0, 0, max_y - 1)
+
+        x1 = x0 + 1
+        y1 = y0 + 1
 
         flat_image = image.reshape(batch_size, num_channels, -1)
 
@@ -66,16 +78,16 @@ class BilinearInterpolation(nn.Module):
 
         # Look up pixel values
         pixel_values_a = torch.gather(
-            flat_image, 2, indices_a.unsqueeze(-1).expand(-1, num_channels, -1)
+            flat_image, 2, indices_a.unsqueeze(1).expand(-1, num_channels, -1)
         )
         pixel_values_b = torch.gather(
-            flat_image, 2, indices_b.unsqueeze(-1).expand(-1, num_channels, -1)
+            flat_image, 2, indices_b.unsqueeze(1).expand(-1, num_channels, -1)
         )
         pixel_values_c = torch.gather(
-            flat_image, 2, indices_c.unsqueeze(-1).expand(-1, num_channels, -1)
+            flat_image, 2, indices_c.unsqueeze(1).expand(-1, num_channels, -1)
         )
         pixel_values_d = torch.gather(
-            flat_image, 2, indices_d.unsqueeze(-1).expand(-1, num_channels, -1)
+            flat_image, 2, indices_d.unsqueeze(1).expand(-1, num_channels, -1)
         )
 
         x0, x1, y0, y1 = x0.float(), x1.float(), y0.float(), y1.float()
@@ -94,7 +106,7 @@ class BilinearInterpolation(nn.Module):
         return interpolated_image  # [B, C, H, W]
         # return interpolated_image.permute(0, 3, 1, 2) # [B, H, W, C]
 
-    def _make_regular_grids(self, batch_size, height, width):
+    def _make_regular_grids(self, batch_size, height, width,):
         """
         First generate uniform values for width and height in the range -1 to 1.
         Next, we create a grid using torch.meshgrid, then concatenate the x and y coordinates
@@ -106,9 +118,10 @@ class BilinearInterpolation(nn.Module):
         # x_linspace = torch.linspace(-1.0, 1.0, width).float().to(image.device) # GPU
         # y_linspace = torch.linspace(-1.0, 1.0, height).float().to(image.device) # GPU
         x_coordinates, y_coordinates = torch.meshgrid(x_linspace, y_linspace)
+        #  x_coordinates, y_coordinates = torch.meshgrid(x_linspace, y_linspace,indexing='ij')   # Add this line to specify indexing
         x_coordinates = x_coordinates.flatten(0)
         y_coordinates = y_coordinates.flatten(0)
-        ones = torch.ones_like(x_coordinates)
+        ones = torch.ones_like(x_coordinates).to(self.device)
         grid = torch.stack([x_coordinates, y_coordinates, ones], 0)
         grid = grid.repeat(batch_size, 1, 1)
         return grid
@@ -120,7 +133,7 @@ class BilinearInterpolation(nn.Module):
         sampled_grids = torch.bmm(theta, regular_grids)
         transformed_image = self._interpolate(X, sampled_grids)
         # Convert [B, C, H, W] back to [B, H, W, C]
-        transformed_image = transformed_image.permute(0, 2, 3, 1)
+        # transformed_image = transformed_image.permute(0, 2, 3, 1)
 
         return transformed_image
 
