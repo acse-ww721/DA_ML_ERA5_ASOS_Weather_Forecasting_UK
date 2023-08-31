@@ -297,34 +297,34 @@ def get_asos_year_file_list(country, data_folder, data_category, output_folder):
     ]  # return the full path
 
 
-def csv_to_nc4(
-    merged_csv_path, year, country, data_folder, data_category, output_folder
-):
-    """Convert the merged CSV file to netCDF4 format by year."""
-    parse_dates = ["time"]
-    dtype_optimization = {
-        "t2m": "float32",
-        "latitude": "float64",
-        "longitude": "float64",
-    }
-    df = pd.read_csv(merged_csv_path, dtype=dtype_optimization, parse_dates=parse_dates)
-    ds_in = xr.Dataset.from_dataframe(df.set_index(["latitude", "longitude", "time"]))
-    ds_in = ds_in.sel(
-        latitude=slice(50, 58), longitude=slice(-6, 2)
-    )  # not reverse as era5
-    ddeg_out_lat = 0.25
-    ddeg_out_lon = 0.125
-    regridded_ds = regrid(
-        ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False
-    )
-
-    output_directory = folder_utils.find_folder(
-        country, data_folder, data_category, output_folder
-    )
-    output_filename = f"{country}_ASOS_regird_{year}.nc"
-    output_path = os.path.join(output_directory, output_filename)
-    regridded_ds.to_netcdf(output_path)
-    print(f"{output_filename} done!")
+# def csv_to_nc4(
+#     merged_csv_path, year, country, data_folder, data_category, output_folder
+# ):
+#     """Convert the merged CSV file to netCDF4 format by year."""
+#     parse_dates = ["time"]
+#     dtype_optimization = {
+#         "t2m": "float32",
+#         "latitude": "float64",
+#         "longitude": "float64",
+#     }
+#     df = pd.read_csv(merged_csv_path, dtype=dtype_optimization, parse_dates=parse_dates)
+#     ds_in = xr.Dataset.from_dataframe(df.set_index(["latitude", "longitude", "time"]))
+#     ds_in = ds_in.sel(
+#         latitude=slice(50, 58), longitude=slice(-6, 2)
+#     )  # not reverse as era5
+#     ddeg_out_lat = 0.25
+#     ddeg_out_lon = 0.125
+#     regridded_ds = regrid(
+#         ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False
+#     )
+#
+#     output_directory = folder_utils.find_folder(
+#         country, data_folder, data_category, output_folder
+#     )
+#     output_filename = f"{country}_ASOS_regird_{year}.nc"
+#     output_path = os.path.join(output_directory, output_filename)
+#     regridded_ds.to_netcdf(output_path)
+#     print(f"{output_filename} done!")
 
 
 # def csv_to_nc4(merged_csv_path, country, data_folder, data_category, output_folder):
@@ -398,6 +398,63 @@ def csv_to_nc4(
 #     except Exception as e:
 #         print(f"Error processing and saving data: {e}")
 #         return False
+
+
+def filter_data(df):
+    """
+    Filter data by deleting rows with missing values and wrong values
+    """
+    # Delete rows with missing values
+    df = df.dropna()
+    # Delete rows with wrong values
+    df["time"] = pd.to_datetime(df["time"])  # Convert to datetime
+    # If the time is not a whole hour, delete the row
+    is_whole_hour = (df["time"].dt.minute == 0) & (df["time"].dt.second == 0)
+    not_null = df["time"].notnull()
+    latitude_condition = (df["latitude"] >= 50) & (df["latitude"] <= 58)
+    longitude_condition = (df["longitude"] >= -6) & (df["longitude"] <= 2)
+    # Combine all conditions
+    combined_condition = (
+        is_whole_hour & not_null & latitude_condition & longitude_condition
+    )
+
+    filtered_df = df[combined_condition]
+
+    return filtered_df
+
+
+def csv_to_nc4(
+    merged_csv_path, year, country, data_folder, data_category, output_folder
+):
+    """
+    Convert csv files to nc4 files by year
+    """
+    # Read csv files
+    df = pd.read_csv(merged_csv_path)
+
+    # Filter data
+    df = filter_data(df)
+
+    ds_in = xr.Dataset.from_dataframe(df.set_index(["latitude", "longitude", "time"]))
+    ds_in = ds_in.sel(latitude=slice(50, 58), longitude=slice(-6, 2))
+    ds_adjusted = ds_in.transpose("time", "latitude", "longitude")
+    ds_adjusted["t2m"] = ds_adjusted["t2m"].astype("float32")
+
+    # ddeg_out_lat = 0.25
+    # ddeg_out_lon = 0.125
+    # regridded_ds = regrid(
+    #     ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False
+    # )
+
+    # Save to nc4 file
+
+    output_directory = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    output_filename = f"{country}_ASOS_filter_{year}.nc"
+    output_path = os.path.join(output_directory, output_filename)
+    ds_adjusted.to_netcdf(output_path)
+    print(f"{output_filename} done!")
 
 
 # Example usage
