@@ -7,7 +7,12 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from utils import folder_utils
 from tqdm import tqdm
-from asos_preprocessing import get_year, get_asos_year_file_list, get_year_from_filename, filter_data
+from asos_preprocessing import (
+    get_year,
+    get_asos_year_file_list,
+    get_year_from_filename,
+    filter_data,
+)
 
 # from asos_preprocessing import csv_to_nc4
 
@@ -83,7 +88,7 @@ def krige_regrid(
 
     # 3.Define the grid
     g_lon = np.linspace(-6.0, 1.875, 64)  # longitude
-    g_lat = np.linspace(50.0, 57.5, 32)  # latitude
+    g_lat = np.linspace(50.0, 57.75, 32)  # latitude
     # gridx, gridy = np.meshgrid(gridx, gridy)
 
     # 4. Drift term
