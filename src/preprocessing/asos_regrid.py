@@ -74,8 +74,8 @@ def krige_regrid(
 ):
     # 1. Load the data
     df = pd.read_csv(year_df_path)
-    lat = df["latitude"].values
-    lon = df["longitude"].values
+    # lat = df["latitude"].values
+    # lon = df["longitude"].values
 
     # 2. Create a new dataframe to store the interpolated data
     output_df = pd.DataFrame()
@@ -93,8 +93,11 @@ def krige_regrid(
 
     # Iterate over each time
     for time_point in tqdm(unique_times):
-        # 1. Load data
-        t2m = df[df["time"] == time_point]["t2m"].values
+        # 1. Load data for the specific time point
+        time_df = df[df["time"] == time_point]
+        t2m = time_df["t2m"].values
+        lat = time_df["latitude"].values
+        lon = time_df["longitude"].values
 
         # 2. Estimate the variogram
         bin_center, vario = gs.vario_estimate(
