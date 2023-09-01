@@ -7,7 +7,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from utils import folder_utils
 from tqdm import tqdm
-from asos_preprocessing import get_year, get_asos_year_file_list, get_year_from_filename
+from asos_preprocessing import get_year, get_asos_year_file_list, get_year_from_filename, filter_data
 
 # from asos_preprocessing import csv_to_nc4
 
@@ -74,6 +74,7 @@ def krige_regrid(
 ):
     # 1. Load the data
     df = pd.read_csv(year_df_path)
+    df = filter_data(df)
     # lat = df["latitude"].values
     # lon = df["longitude"].values
 
