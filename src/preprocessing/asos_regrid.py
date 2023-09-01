@@ -2,6 +2,9 @@ import os
 import pandas as pd
 import numpy as np
 import xarray as xr
+import gstools as gs
+import geopandas as gpd
+import matplotlib.pyplot as plt
 from utils import folder_utils
 
 # from asos_preprocessing import csv_to_nc4
@@ -70,3 +73,73 @@ def csv_to_nc4(
     output_path = os.path.join(output_directory, output_filename)
     ds_adjusted.to_netcdf(output_path)
     print(f"{output_filename} done!")
+
+
+def krige_regrid(
+    year_df_path, year, country, data_folder, data_category, output_folder
+):
+    # 1. Load the data
+    df = pd.read_csv(year_df_path)
+    lat = df["latitude"].values
+    lon = df["longitude"].values
+
+    # 2. Create a new dataframe to store the interpolated data
+    output_df = pd.DataFrame()
+
+    # 3.Define the grid
+    g_lon = np.linspace(-6.0, 1.875, 64)  # longitude
+    g_lat = np.linspace(50.0, 57.5, 32)  # latitude
+    # gridx, gridy = np.meshgrid(gridx, gridy)
+
+    # 4. Drift term
+    def north_south_drift(lat, lon):
+        return lat
+
+    unique_times = df["time"].unique()
+
+    # Iterate over each time
+    for time_point in unique_times:
+        # 1. Load data
+        t2m = df[df["time"] == time_point]["t2m"].values
+
+        # 2. Estimate the variogram
+        bin_center, vario = gs.vario_estimate(
+            (lat, lon), t2m, latlon=True, geo_scale=gs.KM_SCALE, max_dist=900
+        )
+
+        # 3. krige interpolation
+        model = gs.Spherical(latlon=True, geo_scale=gs.KM_SCALE)
+        model.fit_variogram(bin_center, vario, nugget=False)
+
+        # 5. Universal Kriging
+
+        uk = gs.krige.Universal(
+            model=model,
+            cond_pos=(lat, lon),
+            cond_val=t2m,
+            drift_functions=north_south_drift,
+        )
+
+        uk.set_pos((g_lat, g_lon), mesh_type="structured")
+        interpolated_values = uk(return_var=False)
+
+        temp_df = pd.DataFrame(
+            {
+                "lat": np.tile(g_lat, len(g_lon)),
+                "lon": np.repeat(g_lon, len(g_lat)),
+                "time": [time_point] * len(g_lat) * len(g_lon),
+                "t2m": interpolated_values.ravel(),
+            }
+        )
+
+        output_df = pd.concat([output_df, temp_df], ignore_index=True)
+
+    # Save to csv file
+    output_directory = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
+    output_filename = f"{country}_ASOS_krige_{year}.csv"
+    output_path = os.path.join(output_directory, output_filename)
+    output_df.to_csv(output_path, index=False)
+
+    # return output_df
