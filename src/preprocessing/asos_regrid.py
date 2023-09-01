@@ -6,16 +6,10 @@ import gstools as gs
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from utils import folder_utils
+from tqdm import tqdm
+from asos_preprocessing import get_year, get_asos_year_file_list, get_year_from_filename
 
 # from asos_preprocessing import csv_to_nc4
-
-# Example usage
-country = "GB"
-data_folder = "data"
-data_read_category = "raw_data"
-data_test_category = "test_data"
-data_save_category = "processed_data"
-output_folder = "ASOS_DATA"
 
 
 def filter_data(df):
@@ -98,7 +92,7 @@ def krige_regrid(
     unique_times = df["time"].unique()
 
     # Iterate over each time
-    for time_point in unique_times:
+    for time_point in tqdm(unique_times):
         # 1. Load data
         t2m = df[df["time"] == time_point]["t2m"].values
 
@@ -143,3 +137,23 @@ def krige_regrid(
     output_df.to_csv(output_path, index=False)
 
     # return output_df
+
+
+########################################################################################
+
+# Example usage
+country = "GB"
+data_folder = "data"
+data_read_category = "raw_data"
+data_test_category = "test_data"
+data_save_category = "processed_data"
+output_folder = "ASOS_DATA"
+
+year_list = get_year(start_year=1979, end_year=2023)
+csv_paths = get_asos_year_file_list(
+    country, data_folder, data_save_category, output_folder
+)
+for year, csv_path in tqdm(zip(year_list, csv_paths)):
+    krige_regrid(
+        csv_path, year, country, data_folder, data_save_category, output_folder
+    )
