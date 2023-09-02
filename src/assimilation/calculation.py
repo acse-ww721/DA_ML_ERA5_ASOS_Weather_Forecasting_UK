@@ -4,6 +4,7 @@ import numpy as np
 import xarray as xr
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 def calculate_acc(era5_data, stn_model_data, model_weight):
@@ -37,7 +38,7 @@ def calculate_acc(era5_data, stn_model_data, model_weight):
 
     pred_data = np.zeros([initial_conditions, steps, 32, 64])
 
-    for idx, start_t in enumerate(random_indices):
+    for idx, start_t in tqdm(enumerate(random_indices)):
         current_data = era5_t[start_t].reshape(1, 32, 64, 1)
         for s in range(steps):
             # Using the current data to predict the data for 24 hours later
@@ -46,13 +47,16 @@ def calculate_acc(era5_data, stn_model_data, model_weight):
             current_data = pred_data[idx, s].reshape(1, 32, 64, 1)
 
     # Calculate accuracy
-    acc_values = []
-    for i in range(initial_conditions):
-        for s in range(steps):
-            actual_data = era5_t[random_indices[i] + s * dt]
+    stepwise_acc_values = np.zeros(steps)
+    # Calculate accuracy for each step
+    for s in range(steps):
+        acc_values_for_this_step = []
+        for i in range(initial_conditions):
+            actual_data = era5_t[random_indices[i] + s*dt]
             predicted_data = pred_data[i, s]
 
             correlation, _ = pearsonr(actual_data.flatten(), predicted_data.flatten())
-            acc_values.append(correlation)
+            acc_values_for_this_step.append(correlation)
+        stepwise_acc_values[s] = np.mean(acc_values_for_this_step)
 
-    return np.mean(acc_values)
+    return stepwise_acc_values
