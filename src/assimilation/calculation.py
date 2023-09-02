@@ -56,3 +56,6 @@ def calculate_acc(era5_data, stn_model_data, model_weight):
             acc_values.append(correlation)
 
     return np.mean(acc_values)
+
+
+
