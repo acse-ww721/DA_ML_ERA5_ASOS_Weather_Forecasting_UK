@@ -74,7 +74,7 @@ def csv_to_nc4(
     print(f"{output_filename} done!")
 
 
-def krige_regrid(
+def krige_regrid_poly(
     year_df_path, year, country, data_folder, data_category, output_folder
 ):
     # 1. Load the data
@@ -95,9 +95,39 @@ def krige_regrid(
     def north_south_drift(lat, lon):
         return lat
 
-    # 4. Drift term
+        # 4. Drift term
+
     def polynomial_drift(lat, lon):
         return [1, lat, lon, lat**2, lon**2, lat * lon]
+
+        # 4. Drift terms
+
+    def drift_1(lat, lon):
+        return 1
+
+    def drift_lat(lat, lon):
+        return lat
+
+    def drift_lon(lat, lon):
+        return lon
+
+    def drift_lat2(lat, lon):
+        return lat**2
+
+    def drift_lon2(lat, lon):
+        return lon**2
+
+    def drift_lat_lon(lat, lon):
+        return lat * lon
+
+    drift_functions = [
+        drift_1,
+        drift_lat,
+        drift_lon,
+        drift_lat2,
+        drift_lon2,
+        drift_lat_lon,
+    ]
 
     unique_times = df["time"].unique()
 
@@ -124,7 +154,7 @@ def krige_regrid(
             model=model,
             cond_pos=(lat, lon),
             cond_val=t2m,
-            drift_functions=polynomial_drift,
+            drift_functions=drift_functions,
         )
 
         uk.set_pos((g_lat, g_lon), mesh_type="structured")
