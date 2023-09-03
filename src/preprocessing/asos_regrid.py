@@ -95,6 +95,10 @@ def krige_regrid(
     def north_south_drift(lat, lon):
         return lat
 
+    # 4. Drift term
+    def polynomial_drift(lat, lon):
+        return [1, lat, lon, lat**2, lon**2, lat * lon]
+
     unique_times = df["time"].unique()
 
     # Iterate over each time
@@ -120,7 +124,7 @@ def krige_regrid(
             model=model,
             cond_pos=(lat, lon),
             cond_val=t2m,
-            drift_functions=north_south_drift,
+            drift_functions=polynomial_drift,
         )
 
         uk.set_pos((g_lat, g_lon), mesh_type="structured")
