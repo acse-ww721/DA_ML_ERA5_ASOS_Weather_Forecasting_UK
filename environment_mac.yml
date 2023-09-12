@@ -1,0 +1,16 @@
+# This file can be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: osx-arm64
+name: acse_ww721_irp
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy>1.16
+  - scipy
+  - matplotlib
+  - sympy
+  - pip
+  - pip:
+      - -r requirements_mac.txt

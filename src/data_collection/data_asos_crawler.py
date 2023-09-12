@@ -1,3 +1,6 @@
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 # The European Union has 27 member states
 # The site use GB to denote UK_ASOS
 # the eu_member_codes has 28 variables: UK + EU
@@ -61,30 +64,23 @@ endts = datetime.datetime(2023, 8, 2)
 MAX_ATTEMPTS = 6
 
 
-# def get_current_directory():
-#     if "__file__" in globals():
-#         # Running in a Python file
-#         return os.path.abspath(os.path.dirname(__file__))
-#     else:
-#         # Running in a Jupyter Notebook
-#         return os.path.abspath(os.path.dirname(""))
-
-
-# def create_folder(c):
-#     current_directory = get_current_directory()
-#     folder_name = f"{c}_ASOS_DATA"
-#     folder_path = os.path.join(current_directory, folder_name)
-#
-#     try:
-#         os.mkdir(folder_path)
-#         print(f"Folder '{folder_path}' created successfully.")
-#     except FileExistsError:
-#         print(f"Folder '{folder_path}' already exists.")
-#
-#     return folder_path
-
-
 def get_all_network():
+    """
+    Get a list of option values from a select element on a web page.
+
+    This function sends a GET request to the specified URL, parses the HTML content,
+    and extracts the values of the "option" elements within the first "select" element
+    found on the page.
+
+    Example:
+        >>> get_all_network()
+        # Prints the option values from the specified web page.
+
+    Note:
+        You need to have the 'requests' and 'beautifulsoup4' libraries installed
+        to use this function.
+
+    """
     url = "https://mesonet.agron.iastate.edu/request/download.phtml?network=FR__ASOS"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -104,6 +100,24 @@ def get_all_network():
 
 
 def get_network_url(country_list):
+    """
+    Get valid network URLs for a list of countries.
+
+    This function generates network URLs for a list of countries and checks if the URLs are valid by sending a HEAD request.
+    Valid URLs are added to the 'valid_urls' list, while invalid URLs are added to the 'invalid_urls' list.
+
+    Args:
+        country_list (list): A list of country codes or identifiers.
+
+    Returns:
+        list: A list of valid network URLs.
+
+    Example:
+        >>> country_list = ["GB", "FR", "DE"]
+        >>> valid_urls = get_network_url(country_list)
+        # Returns a list of valid network URLs for the specified countries.
+
+    """
     valid_urls = []
     invalid_urls = []
 
@@ -120,7 +134,31 @@ def get_network_url(country_list):
     return valid_urls
 
 
-def get_all_station_by_network(country_list):
+def get_all_station_by_network(country_list, data_folder, data_category, output_folder):
+    """
+    Get station information for a list of countries by network and save it as CSV files.
+
+    This function retrieves station information in GeoJSON format for each country in the list,
+    extracts relevant data, and saves it as a CSV file in the specified output directory.
+
+    Args:
+        country_list (list): A list of country codes or identifiers.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+
+    Returns:
+        pd.DataFrame: A Pandas DataFrame containing station information for the last country in the list.
+
+    Example:
+        >>> country_list = ["GB", "FR", "DE"]
+        >>> data_folder = "data"
+        >>> data_category = "raw_data"
+        >>> output_folder = "ASOS_DATA"
+        >>> station_data_df = get_all_station_by_network(country_list, data_folder, data_category, output_folder)
+        # Retrieves station information for the specified countries and saves CSV files.
+
+    """
     # valid_urls = get_network_url()
     for i in country_list:
         url_station_geojson = (
@@ -166,6 +204,30 @@ def get_all_station_by_network(country_list):
 
 
 def get_data_url(df, startts, endts):
+    """
+    Generate data download URLs for a DataFrame of stations and date range.
+
+    This function generates data download URLs for each station in the DataFrame, for a specified date range.
+    The URLs are constructed based on the station ID, start date, and end date.
+
+    Args:
+        df (pd.DataFrame): A Pandas DataFrame containing station information, including the "ID" column.
+        startts (datetime.pyi): The start date for the data download.
+        endts (datetime.pyi): The end date for the data download.
+
+    Returns:
+        list: A list of data download URLs corresponding to each station ID.
+        list: A list of station IDs.
+
+    Example:
+        >>> import pandas as pd
+        >>> station_data = pd.read_csv("stations.csv")
+        >>> startts = pd.Timestamp("2023-01-01")
+        >>> endts = pd.Timestamp("2023-12-31")
+        >>> url_list, id_list = get_data_url(station_data, startts, endts)
+        # Generates data download URLs for the specified date range and station IDs.
+
+    """
     url_site_list = []
     id_list = []
     url_site_header = "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?"
@@ -182,6 +244,24 @@ def get_data_url(df, startts, endts):
 
 
 def download_data(url_site):
+    """
+    Download data from a given URL with retry attempts.
+
+    This function sends GET requests to the specified URL and retries up to a maximum number of attempts (MAX_ATTEMPTS)
+    in case of connection errors or if the response starts with "ERROR."
+
+    Args:
+        url_site (str): The URL to download data from.
+
+    Returns:
+        str: The downloaded data as a string, or an empty string if download attempts are exhausted.
+
+    Example:
+        >>> url = "https://example.com/data"
+        >>> data = download_data(url)
+        # Downloads data from the specified URL with retry attempts.
+
+    """
     attempt = 0
     while attempt < MAX_ATTEMPTS:
         try:
@@ -198,7 +278,45 @@ def download_data(url_site):
     return ""
 
 
-def save_data(url_site, country, station, startts, endts):
+def save_data(
+    url_site,
+    country,
+    station,
+    startts,
+    endts,
+    data_folder,
+    data_category,
+    output_folder,
+):
+    """
+    Download and save data from a URL as a CSV file.
+
+    This function downloads data from the specified URL, parses it, and saves it as a CSV file in the specified output directory.
+    The CSV file is named based on the country, station, and date range.
+
+    Args:
+        url_site (str): The URL to download data from.
+        country (str): The country code or identifier.
+        station (str): The station identifier.
+        startts (datetime.pyi): The start date of the data.
+        endts (datetime.pyi): The end date of the data.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+
+    Example:
+        >>> url = "https://example.com/data"
+        >>> country = "US"
+        >>> station = "ABC123"
+        >>> start_date = pd.Timestamp("2023-01-01")
+        >>> end_date = pd.Timestamp("2023-12-31")
+        >>> data_folder = "data"
+        >>> data_category = "temperature"
+        >>> output_folder = "output"
+        >>> save_data(url, country, station, start_date, end_date, data_folder, data_category, output_folder)
+        # Downloads and saves data from the specified URL as a CSV file.
+
+    """
     data = download_data(url_site)
     # output_filename = f"{country}_{startts:%Y%m%d%H%M}_{endts:%Y%m%d%H%M}.csv"
     output_directory = folder_utils.create_folder(
@@ -229,14 +347,61 @@ def save_data(url_site, country, station, startts, endts):
     print(f"{output_filename} done!")
 
 
-def download_and_save_data(url_site, country, station, startts, endts):
+def download_and_save_data(
+    url_site,
+    country,
+    station,
+    startts,
+    endts,
+    data_folder,
+    data_category,
+    output_folder,
+):
+    """
+    Download data from a URL, save it as a CSV file, and measure download time.
+
+    This function combines the download and save operations, measures the download time, and prints download status.
+
+    Args:
+        url_site (str): The URL to download data from.
+        country (str): The country code or identifier.
+        station (str): The station identifier.
+        startts (datetime.pyi): The start date of the data.
+        endts (datetime.pyi): The end date of the data.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+
+    Example:
+        >>> url = "https://example.com/data"
+        >>> country = "GB"
+        >>> station = "EGAA"
+        >>> startts = datetime.datetime(1976, 1, 1)
+        >>> endts = end_date = datetime.datetime(2023, 1, 1)
+        >>> data_folder = "data"
+        >>> data_category = "raw_data"
+        >>> output_folder = "ASOS_DATA"
+
+        >>> download_and_save_data(url, country, station, start_date, end_date, data_folder, data_category, output_folder)
+        # Downloads data from the specified URL, saves it as a CSV file, and measures download time.
+
+    """
     start_time = time.time()  # Record start time
     data = download_data(url_site)
     end_time = time.time()  # Record end time
     download_time = end_time - start_time
 
     if data:
-        save_data(url_site, country, station, startts, endts)
+        save_data(
+            url_site,
+            country,
+            station,
+            startts,
+            endts,
+            data_folder,
+            data_category,
+            output_folder,
+        )
         print(f"{station} - Download time: {download_time:.3f} s")
     else:
         print(f"{station} - Download failed")
@@ -244,7 +409,16 @@ def download_and_save_data(url_site, country, station, startts, endts):
 
 def download_and_save_data_thread(args):
     url_site, country, station_id, startts, endts = args
-    download_and_save_data(url_site, country, station_id, startts, endts)
+    download_and_save_data(
+        url_site,
+        country,
+        station_id,
+        startts,
+        endts,
+        data_folder,
+        data_category,
+        output_folder,
+    )
 
 
 # UK example
@@ -261,7 +435,7 @@ end_date = datetime.datetime(
     2023, 1, 1
 )  # the end date is 2022/12/31 because the end date is not included
 
-gb_df = get_all_station_by_network(country)
+gb_df = get_all_station_by_network(country, data_folder, data_category, output_folder)
 url_site_list, id_list = get_data_url(gb_df, start_date, end_date)
 args_list = [
     (url_site, "GB", station_id, start_date, end_date)

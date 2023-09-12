@@ -1,11 +1,13 @@
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 import cdsapi
 import threading
 import time
 import os
-import sys
 from tqdm import tqdm
-from data_era5_download import days_check
-from data_era5_download import (
+from utils.time_utils import days_check
+from data_era5_t2m import (
     data_year,
     data_month,
     data_time,
@@ -17,6 +19,16 @@ from data_era5_download import (
 from utils import folder_utils
 
 # 1,149.904 > 120,000
+
+
+"""
+Download ERA5 data from CDS
+Variables: T850, RH850. T1000, RH1000
+Time range: 1979-2022
+data level: hourly
+data volume: 1,571,328 
+"""
+
 
 dataset = "reanalysis-era5-pressure-levels"
 variable_list = [
@@ -50,6 +62,21 @@ c = cdsapi.Client()
 
 
 def era5_get_data_keisler(c, dataset, variable_list, year, month, pressure_level):
+    """
+    Download ERA5 reanalysis data for a specific year, month, and pressure level.
+
+    Args:
+        c: An instance of the CDS API client.
+        dataset (str): The name of the dataset to download.
+        variable_list (list): A list of variable names to download.
+        year (str): The year for which to download the data.
+        month (str): The month for which to download the data.
+        pressure_level (str): The pressure level at which to download the data.
+
+    Example:
+        >>> era5_get_data_keisler(cdsapi.Client(), "reanalysis-era5-pressure-levels", ["temperature"], "2023", "02", "850")
+        # Downloads ERA5 reanalysis data for temperature at 850 hPa for February 2023.
+    """
     try:
         start_time = time.time()  # Record start time
         output_directory = folder_utils.create_folder(

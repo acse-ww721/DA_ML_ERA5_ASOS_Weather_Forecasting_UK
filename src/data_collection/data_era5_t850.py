@@ -1,3 +1,6 @@
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 import sys
 import cdsapi
 import threading
@@ -185,8 +188,35 @@ thread_local = threading.local()
 
 
 def era5_get_data_t850(c, dataset, variable_list, year, month):
-    # download the whole year data
+    """
+    Download ERA5 reanalysis data for a specific year and month.
+
+    Args:
+        c: An instance of the CDS API client.
+        dataset (str): The name of the dataset to download.
+        variable_list (list): A list of variable names to download.
+        year (str): The year for which to download the data.
+        month (str): The month  for which to download the data.
+
+    Example:
+        >>> era5_get_data_t850(cdsapi.Client(), "reanalysis-era5-pressure-levels", ["temperature"], "2023", "02")
+        # Downloads ERA5 reanalysis data for temperature at 850 hPa for February 2023.
+
+    Note:
+        You need to import and set up the CDS API client ('c') before using this function.
+
+    """
     try:
+        country = (
+            "your_country"  # Replace with the appropriate country code or identifier
+        )
+        data_folder = "your_data_folder"  # Replace with the path to your data folder
+        data_category = "your_data_category"  # Replace with the data category
+        output_folder = "your_output_folder"  # Replace with the output folder name
+        pressure_level = 850  # Replace with the desired pressure level
+        data_time = "your_data_time"  # Replace with the data time settings
+        area_uk = "your_area_uk"  # Replace with the desired area settings
+
         output_directory = folder_utils.create_folder(
             country, data_folder, data_category, output_folder
         )
@@ -218,9 +248,20 @@ def era5_get_data_t850(c, dataset, variable_list, year, month):
 
 
 def thread_function(year, month):
-    c = cdsapi.Client()  # Initialize client within the thread
+    """
+    Function to download ERA5 reanalysis data for a specific year and month within a thread.
 
-    start_time = time.time()  # Record start time
+    Args:
+        year (str): The year for which to download the data.
+        month (str): The month for which to download the data.
+
+    Example:
+        >>> thread_function("2023", "02")
+        # Downloads ERA5 reanalysis data for a specified year and month within a thread.
+    """
+    c = cdsapi.Client()  # Initialize the CDS API client within the thread
+
+    start_time = time.time()  # Record the start time
     era5_get_data_t850(
         c,
         dataset,
@@ -228,7 +269,7 @@ def thread_function(year, month):
         year,
         month,
     )
-    end_time = time.time()  # Record end time
+    end_time = time.time()  # Record the end time
     run_time = end_time - start_time
     print(f"Download time: {run_time:.3f} s")
 
