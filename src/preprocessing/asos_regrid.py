@@ -1,82 +1,40 @@
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 import os
 import pandas as pd
 import numpy as np
-import xarray as xr
 import gstools as gs
-import geopandas as gpd
-import matplotlib.pyplot as plt
 from utils import folder_utils
 from tqdm import tqdm
 from asos_preprocessing import (
     get_year,
     get_asos_year_file_list,
-    get_year_from_filename,
     filter_data,
 )
-
-# from asos_preprocessing import csv_to_nc4
-
-
-def filter_data(df):
-    """
-    Filter data by deleting rows with missing values and wrong values
-    """
-    # Delete rows with missing values
-    df = df.dropna()
-    # Delete rows with wrong values
-    df["time"] = pd.to_datetime(df["time"])  # Convert to datetime
-    # If the time is not a whole hour, delete the row
-    is_whole_hour = (df["time"].dt.minute == 0) & (df["time"].dt.second == 0)
-    not_null = df["time"].notnull()
-    latitude_condition = (df["latitude"] >= 50) & (df["latitude"] <= 58)
-    longitude_condition = (df["longitude"] >= -6) & (df["longitude"] <= 2)
-    # Combine all conditions
-    combined_condition = (
-        is_whole_hour & not_null & latitude_condition & longitude_condition
-    )
-
-    filtered_df = df[combined_condition]
-
-    return filtered_df
-
-
-def csv_to_nc4(
-    merged_csv_path, year, country, data_folder, data_category, output_folder
-):
-    """
-    Convert csv files to nc4 files by year
-    """
-    # Read csv files
-    df = pd.read_csv(merged_csv_path)
-
-    # Filter data
-    df = filter_data(df)
-
-    ds_in = xr.Dataset.from_dataframe(df.set_index(["latitude", "longitude", "time"]))
-    ds_in = ds_in.sel(latitude=slice(50, 58), longitude=slice(-6, 2))
-    ds_adjusted = ds_in.transpose("time", "latitude", "longitude")
-    ds_adjusted["t2m"] = ds_adjusted["t2m"].astype("float32")
-
-    # ddeg_out_lat = 0.25
-    # ddeg_out_lon = 0.125
-    # regridded_ds = regrid(
-    #     ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False
-    # )
-
-    # Save to nc4 file
-
-    output_directory = folder_utils.find_folder(
-        country, data_folder, data_category, output_folder
-    )
-    output_filename = f"{country}_ASOS_filter_{year}.nc"
-    output_path = os.path.join(output_directory, output_filename)
-    ds_adjusted.to_netcdf(output_path)
-    print(f"{output_filename} done!")
 
 
 def krige_regrid_poly(
     year_df_path, year, country, data_folder, data_category, output_folder
 ):
+    """
+    Perform kriging interpolation with polynomial drift modeling to regrid meteorological data.
+
+    Args:
+        year_df_path (str): Path to the input CSV file for the specified year.
+        year (int): The year for which the data is being regridded.
+        country (str): Country code or name.
+        data_folder (str): Folder where the data is stored.
+        data_category (str): Category of the data.
+        output_folder (str): Folder where the regridded data will be saved.
+
+    Returns:
+        None
+
+    Example:
+        >>> krige_regrid_poly("year_data.csv", 2022, "GB", "data_folder", "data_category", "output_folder")
+        # Performs kriging interpolation and polynomial drift modeling for the specified year.
+    """
     # 1. Load the data
     df = pd.read_csv(year_df_path)
     df = filter_data(df)
@@ -91,16 +49,16 @@ def krige_regrid_poly(
     g_lat = np.linspace(50.0, 57.75, 32)  # latitude
     # gridx, gridy = np.meshgrid(gridx, gridy)
 
-    # 4. Drift term
-    def north_south_drift(lat, lon):
-        return lat
+    # # 4. Drift term
+    # def north_south_drift(lat, lon):
+    #     return lat
+    #
+    #     # 4. Drift term
+    #
+    # def polynomial_drift(lat, lon):
+    #     return [1, lat, lon, lat**2, lon**2, lat * lon]
 
-        # 4. Drift term
-
-    def polynomial_drift(lat, lon):
-        return [1, lat, lon, lat**2, lon**2, lat * lon]
-
-        # 4. Drift terms
+    # 4. Drift terms
 
     def drift_1(lat, lon):
         return 1
@@ -197,6 +155,6 @@ csv_paths = get_asos_year_file_list(
     country, data_folder, data_save_category, output_folder
 )
 for year, csv_path in tqdm(zip(year_list, csv_paths)):
-    krige_regrid(
+    krige_regrid_poly(
         csv_path, year, country, data_folder, data_save_category, output_folder
     )

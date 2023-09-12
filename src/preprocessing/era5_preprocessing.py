@@ -1,9 +1,11 @@
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 import os
 import re
 import xarray as xr
 import numpy as np
 import xesmf as xe
-import dask
 from utils import folder_utils
 from tqdm import tqdm
 
@@ -23,6 +25,30 @@ SUFFIX = "_850.nc"
 
 
 def get_era5_list(country, data_folder, data_category, output_folder):
+    """
+    Get a list of ERA5 NetCDF files for a specific country.
+
+    This function searches for NetCDF files with "era5" in their names within the specified input folder path,
+    and returns a list of the file paths for ERA5 data files associated with the specified country.
+
+    Args:
+        country (str): The country code or identifier.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+
+    Returns:
+        list: A list of file paths for ERA5 NetCDF data files.
+
+    Example:
+        >>> country = "GB"
+        >>> data_folder = "data"
+        >>> data_category = "processed_data"
+        >>> output_folder = "ERA5_DATA"
+        >>> era5_files = get_era5_list(country, data_folder, data_category, output_folder)
+        # Retrieves a list of ERA5 NetCDF file paths for the specified country.
+
+    """
     input_folder_path = folder_utils.find_folder(
         country, data_folder, data_category, output_folder
     )
@@ -36,7 +62,30 @@ def get_era5_list(country, data_folder, data_category, output_folder):
 
 def merge_ds_by_year(era5_list, country, data_folder, data_category, output_folder):
     """
-    Merge netcdf files by year in the given list.
+    Merge NetCDF files by year in the given list and save the merged files.
+
+    This function organizes NetCDF files by year, merges files for each year, and saves the merged files with a specific prefix.
+    It returns a list of unique years for which data has been merged.
+
+    Args:
+        era5_list (list): A list of file paths to ERA5 NetCDF data files.
+        country (str): The country code or identifier.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+
+    Returns:
+        list: A list of unique years for which data has been merged.
+
+    Example:
+        >>> era5_list = ["file1.nc", "file2.nc"]
+        >>> country = "US"
+        >>> data_folder = "data"
+        >>> data_category = "era5"
+        >>> output_folder = "output"
+        >>> merged_years = merge_ds_by_year(era5_list, country, data_folder, data_category, output_folder)
+        # Merges ERA5 data files by year and saves the merged files.
+
     """
 
     # Organize files by year
@@ -70,13 +119,29 @@ def merge_ds_by_year(era5_list, country, data_folder, data_category, output_fold
 
 def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
     """
-    Cut off the dataset with given lat and lon range
-    :param era5_nc_path: Input xarray dataset path
-    :param lat_min: Minimum latitude
-    :param lat_max: Maximum latitude
-    :param lon_min: Minimum longitude
-    :param lon_max: Maximum longitude
-    :return: ds: Cut off dataset
+    Cut off the dataset with the given latitude and longitude range.
+
+    This function opens an ERA5 NetCDF dataset from the specified path, selects a subset of data within the specified latitude and longitude range, and returns the cut-off dataset.
+
+    Args:
+        era5_nc_path (str): The path to the ERA5 NetCDF dataset.
+        lat_min (float): Minimum latitude for the cutoff.
+        lat_max (float): Maximum latitude for the cutoff.
+        lon_min (float): Minimum longitude for the cutoff.
+        lon_max (float): Maximum longitude for the cutoff.
+
+    Returns:
+        xarray.Dataset: The cut-off dataset containing data within the specified latitude and longitude range.
+
+    Example:
+        >>> era5_nc_path = "era5_data.nc"
+        >>> lat_min = 40.0
+        >>> lat_max = 60.0
+        >>> lon_min = -10.0
+        >>> lon_max = 10.0
+        >>> cut_ds = cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max)
+        # Opens the ERA5 dataset, selects data within the specified latitude and longitude range, and returns the cut-off dataset.
+
     """
     with xr.open_dataset(era5_nc_path) as ds:
         return ds.sel(
@@ -91,13 +156,29 @@ def cutoff_ds(era5_nc_path, lat_min, lat_max, lon_min, lon_max):
 # Original code link: https://github.com/pangeo-data/WeatherBench/blob/master/src/regrid.py
 def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=False):
     """
-    Regrid horizontally (longitude direction).
-    :param ds_in: Input xarray dataset
-    :param ddeg_out_lat: Output resolution latitude
-    :param ddeg_out_lon: Output resolution longitude
-    :param method: Regridding method
-    :param reuse_weights: Reuse weights for regridding
-    :return: ds_out: Regridded dataset
+    Regrid a dataset horizontally (in the longitude direction).
+
+    This function regrids an input xarray dataset to a new grid with the specified latitude and longitude resolutions using a specified regridding method.
+
+    Args:
+        ds_in (xarray.Dataset): The input xarray dataset.
+        ddeg_out_lat (float): The output resolution for latitude.
+        ddeg_out_lon (float): The output resolution for longitude.
+        method (str, optional): The regridding method. Default is "bilinear".
+        reuse_weights (bool, optional): Whether to reuse existing weights for regridding. Default is False.
+
+    Returns:
+        xarray.Dataset: The regridded dataset.
+
+    Example:
+        >>> ds_in = xr.open_dataset("input_data.nc")
+        >>> ddeg_out_lat = 1.0
+        >>> ddeg_out_lon = 1.0
+        >>> method = "bilinear"
+        >>> reuse_weights = False
+        >>> ds_out = regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method, reuse_weights)
+        # Regrids the input dataset to the specified output resolution using the specified regridding method.
+
     """
     # Rename to ESMF compatible coordinates
     if "latitude" in ds_in.coords:
@@ -142,6 +223,30 @@ def regrid(ds_in, ddeg_out_lat, ddeg_out_lon, method="bilinear", reuse_weights=F
 def save_regridded_era5(
     ds_out, year, country, data_folder, data_category, output_folder
 ):
+    """
+    Save regridded ERA5 data to a NetCDF file.
+
+    This function saves a regridded ERA5 dataset to a NetCDF file with a specific naming convention.
+
+    Args:
+        ds_out (xarray.Dataset): The regridded ERA5 dataset.
+        year (str): The year for which the data was regridded.
+        country (str): The country code or identifier.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+
+    Example:
+        >>> ds_out = xr.open_dataset("regridded_era5_data.nc")
+        >>> year = "2022"
+        >>> country = "US"
+        >>> data_folder = "data"
+        >>> data_category = "era5"
+        >>> output_folder = "output"
+        >>> save_regridded_era5(ds_out, year, country, data_folder, data_category, output_folder)
+        # Saves the regridded ERA5 data for the specified year to a NetCDF file.
+
+    """
     prefix = "era5_pressure_level_"
     suffix = "_850.nc"
     output_folder = folder_utils.find_folder(
@@ -155,16 +260,47 @@ def save_regridded_era5(
 def extract_T850_compute_mean_std(
     country, data_folder, data_category, output_folder, start_year=1979, end_year=2020
 ):
+    """
+    Extract T850 data, compute mean and standard deviation.
+
+    This function extracts T850 data from regridded ERA5 NetCDF files for the specified year range, computes the mean and standard deviation of valid values, and returns the results.
+
+    Args:
+        country (str): The country code or identifier.
+        data_folder (str): The path to the data folder.
+        data_category (str): The data category.
+        output_folder (str): The output folder name.
+        start_year (int, optional): The start year for data extraction. Default is 1979.
+        end_year (int, optional): The end year for data extraction. Default is 2020.
+
+    Returns:
+        tuple: A tuple containing the mean and standard deviation of the T850 data.
+
+    Example:
+        >>> country = "US"
+        >>> data_folder = "data"
+        >>> data_category = "era5"
+        >>> output_folder = "output"
+        >>> start_year = 1979
+        >>> end_year = 2020
+        >>> mean_t850, std_t850 = extract_T850_compute_mean_std(country, data_folder, data_category, output_folder, start_year, end_year)
+        # Extracts T850 data from specified years, computes mean and standard deviation.
+
+    """
     # era5_pressure_level_2022_regrid_850.nc
-    input_folder_path = folder_utils.find_folder(country, data_folder, data_category, output_folder)
+    input_folder_path = folder_utils.find_folder(
+        country, data_folder, data_category, output_folder
+    )
     nc_files = [
         os.path.join(input_folder_path, f)
         for f in os.listdir(input_folder_path)
-        if f.endswith(".nc") and "regrid_850" in f and start_year <= int(f.split('_')[3]) <= end_year
+        if f.endswith(".nc")
+        and "regrid_850" in f
+        and start_year <= int(f.split("_")[3]) <= end_year
     ]
     ds = xr.open_mfdataset(nc_files, combine="by_coords")
 
-    t2m_data = ds['t']
+    t2m_data = ds["t"]
 
     mean_list = []
     std_list = []
@@ -186,9 +322,24 @@ def extract_T850_compute_mean_std(
 
 
 def fill_nan_new(Z):
+    """
+    Fill NaN values in a 3D array using interpolation.
+
+    This function fills NaN values in a 3D NumPy array using interpolation. It processes the start, end, and middle NaN values in each 2D slice of the array along the time dimension.
+
+    Args:
+        Z (numpy.ndarray): The 3D array containing NaN values to be filled.
+
+    Returns:
+        numpy.ndarray: The input array with NaN values filled using interpolation.
+
+    Example:
+        >>> Z = np.array([[[1.0, 2.0, np.nan, 4.0], [1.0, np.nan, 3.0, 4.0]], [[2.0, np.nan, 4.0, 5.0], [2.0, 3.0, 4.0, np.nan]]])
+        >>> filled_Z = fill_nan_new(Z)
+        # Fills NaN values in the input 3D array using interpolation.
+    """
     for t in tqdm(range(Z.shape[0])):
         for i in range(Z.shape[1]):
-
             # Process the start nan of the array
             start = 0
             while start < Z.shape[2] and np.isnan(Z[t, i, start]):
@@ -252,9 +403,11 @@ for merged_ds_path, year in tqdm(zip(merge_era5_list[0], year_list[0])):
     ds = cutoff_ds(merged_ds_path, 50, 58, -6, 2)
     ds_out = regrid(ds, ddeg_out_lat, ddeg_out_lon)
     ds_out = ds_out.where((ds_out != 0) & ~np.isnan(ds_out), drop=True)
-    ds_array = np.asarray(ds_out['t'])
-    filled_array=fill_nan_new(ds_array)
-    ds_out['t'] = xr.DataArray(filled_array, dims=ds_out['t'].dims, coords=ds_out['t'].coords)
+    ds_array = np.asarray(ds_out["t"])
+    filled_array = fill_nan_new(ds_array)
+    ds_out["t"] = xr.DataArray(
+        filled_array, dims=ds_out["t"].dims, coords=ds_out["t"].coords
+    )
 
     save_regridded_era5(
         ds_out, year, country, data_folder, data_save_category, output_folder
