@@ -1,7 +1,11 @@
+# The function implementation below is a modification version from Tensorflow
+# Original code link: https://github.com/ashesh6810/DDWP-DA/blob/master/layers.py
+
+
 from keras import backend as K
 from keras.engine.topology import Layer
 
-if K.backend() == 'tensorflow':
+if K.backend() == "tensorflow":
     import tensorflow as tf
 
     def K_meshgrid(x, y):
@@ -29,7 +33,7 @@ class BilinearInterpolation(Layer):
 
     def get_config(self):
         return {
-            'output_size': self.output_size,
+            "output_size": self.output_size,
         }
 
     def compute_output_shape(self, input_shapes):
@@ -43,21 +47,20 @@ class BilinearInterpolation(Layer):
         return output
 
     def _interpolate(self, image, sampled_grids, output_size):
-
         batch_size = K.shape(image)[0]
         height = K.shape(image)[1]
         width = K.shape(image)[2]
         num_channels = K.shape(image)[3]
 
-        x = K.cast(K.flatten(sampled_grids[:, 0:1, :]), dtype='float32')
-        y = K.cast(K.flatten(sampled_grids[:, 1:2, :]), dtype='float32')
+        x = K.cast(K.flatten(sampled_grids[:, 0:1, :]), dtype="float32")
+        y = K.cast(K.flatten(sampled_grids[:, 1:2, :]), dtype="float32")
 
-        x = .5 * (x + 1.0) * K.cast(width, dtype='float32')
-        y = .5 * (y + 1.0) * K.cast(height, dtype='float32')
+        x = 0.5 * (x + 1.0) * K.cast(width, dtype="float32")
+        y = 0.5 * (y + 1.0) * K.cast(height, dtype="float32")
 
-        x0 = K.cast(x, 'int32')
+        x0 = K.cast(x, "int32")
         x1 = x0 + 1
-        y0 = K.cast(y, 'int32')
+        y0 = K.cast(y, "int32")
         y1 = y0 + 1
 
         max_x = int(K.int_shape(image)[2] - 1)
@@ -87,16 +90,16 @@ class BilinearInterpolation(Layer):
         indices_d = base_y1 + x1
 
         flat_image = K.reshape(image, shape=(-1, num_channels))
-        flat_image = K.cast(flat_image, dtype='float32')
+        flat_image = K.cast(flat_image, dtype="float32")
         pixel_values_a = K.gather(flat_image, indices_a)
         pixel_values_b = K.gather(flat_image, indices_b)
         pixel_values_c = K.gather(flat_image, indices_c)
         pixel_values_d = K.gather(flat_image, indices_d)
 
-        x0 = K.cast(x0, 'float32')
-        x1 = K.cast(x1, 'float32')
-        y0 = K.cast(y0, 'float32')
-        y1 = K.cast(y1, 'float32')
+        x0 = K.cast(x0, "float32")
+        x1 = K.cast(x1, "float32")
+        y0 = K.cast(y0, "float32")
+        y1 = K.cast(y1, "float32")
 
         area_a = K.expand_dims(((x1 - x) * (y1 - y)), 1)
         area_b = K.expand_dims(((x1 - x) * (y - y0)), 1)
@@ -111,8 +114,8 @@ class BilinearInterpolation(Layer):
 
     def _make_regular_grids(self, batch_size, height, width):
         # making a single regular grid
-        x_linspace = K_linspace(-1., 1., width)
-        y_linspace = K_linspace(-1., 1., height)
+        x_linspace = K_linspace(-1.0, 1.0, width)
+        y_linspace = K_linspace(-1.0, 1.0, height)
         x_coordinates, y_coordinates = K_meshgrid(x_linspace, y_linspace)
         x_coordinates = K.flatten(x_coordinates)
         y_coordinates = K.flatten(y_coordinates)
@@ -126,8 +129,7 @@ class BilinearInterpolation(Layer):
 
     def _transform(self, X, affine_transformation, output_size):
         batch_size, num_channels = K.shape(X)[0], K.shape(X)[3]
-        transformations = K.reshape(affine_transformation,
-                                    shape=(batch_size, 2, 3))
+        transformations = K.reshape(affine_transformation, shape=(batch_size, 2, 3))
         # transformations = K.cast(affine_transformation[:, 0:2, :], 'float32')
         regular_grids = self._make_regular_grids(batch_size, *output_size)
         sampled_grids = K.batch_dot(transformations, regular_grids)

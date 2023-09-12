@@ -6,8 +6,28 @@ from scipy.stats import pearsonr
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 
 def calculate_acc_and_rmse(era5_data, model_weight):
+    """
+    Calculate accuracy (correlation) and RMSE between ERA5 data and model predictions.
+
+    Parameters:
+        era5_data (str): Path to ERA5 dataset in NetCDF format.
+        model_weight (str): Path to the pre-trained model weights.
+
+    Returns:
+        stepwise_acc_values (ndarray): Array of accuracy values for each time step.
+        stepwise_rmse_values (ndarray): Array of RMSE values for each time step.
+
+    This function loads a pre-trained model, ERA5 data, and calculates the accuracy (correlation)
+    and RMSE between ERA5 data and model predictions. It randomly selects 50 initial conditions
+    and predicts data for 24 hours. It then calculates accuracy and RMSE for each time step
+    in the prediction.
+    """
+
     # Load model
     model = stn()
     model.load_weights(model_weight)
@@ -19,7 +39,9 @@ def calculate_acc_and_rmse(era5_data, model_weight):
     # Select 50 initial conditions randomly
     initial_conditions = 50
     random_indices = np.random.choice(
-        era5_t.shape[0] - 240, size=initial_conditions, replace=False  # -240 to ensure enough range for prediction
+        era5_t.shape[0] - 240,
+        size=initial_conditions,
+        replace=False,  # -240 to ensure enough range for prediction
     )
 
     # Parameters
@@ -44,7 +66,7 @@ def calculate_acc_and_rmse(era5_data, model_weight):
         acc_values_for_this_step = []
         rmse_values_for_this_step = []
         for i in range(initial_conditions):
-            actual_data = era5_t[random_indices[i] + s*dt]
+            actual_data = era5_t[random_indices[i] + s * dt]
             predicted_data = pred_data[i, s]
 
             correlation, _ = pearsonr(actual_data.flatten(), predicted_data.flatten())
