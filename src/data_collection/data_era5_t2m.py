@@ -1,5 +1,9 @@
+# Name: Wenqi Wang
+# Github username: acse-ww721
+
 import cdsapi
-import threading
+
+# import threading
 import time
 import os
 from tqdm import tqdm
@@ -35,10 +39,19 @@ variable_list = [
 
 
 def era5_get_data_single_level(c, dataset, variable_list, year):
-    # multi threads version may have figure in overcapacity error
-    # c: api_server
-    # dataset: target dataset
-    # variable_list: the target variable
+    """
+    Download ERA5 reanalysis data for a specific year and single level.
+
+    Args:
+        c: An instance of the CDS API client.
+        dataset (str): The name of the dataset to download.
+        variable_list (list): A list of variable names to download.
+        year (str): The year for which to download the data.
+
+    Example:
+        >>> era5_get_data_single_level(cdsapi.Client(), "reanalysis-era5-single-levels", ["temperature"], "2023")
+        # Downloads ERA5 reanalysis data for temperature at a single level for the year 2023.
+    """
     try:
         output_directory = folder_utils.create_folder(
             country, data_folder, data_category, output_folder  # i is the data_year
@@ -67,17 +80,6 @@ def era5_get_data_single_level(c, dataset, variable_list, year):
         print(f"Error downloading {output_filename}: {e}\n")
 
 
-# Multiple threads module for accelerating
-
-"""
-Download t2m data from ASOS
-Variables: T850, RH850. T1000, RH1000
-Time range: 1979-2022
-data level: hourly
-data volume: 1,571,328 
-"""
-
-
 def thread_function(year):
     c = cdsapi.Client()  # Initialize client within the thread
 
@@ -102,10 +104,21 @@ with ThreadPoolExecutor(max_workers=8) as executor:
 
 # Single thread module for solving long time queue problem
 def era5_get_data_single_level_st(c, dataset, variable_list, year, month):
-    # single thread version
-    # c: api_server
-    # dataset: target dataset
-    # variable_list: the target variable
+    """
+    Download ERA5 reanalysis data for a specific year, month, and single level (single-threaded version)
+    to resolve the overload error.
+
+    Args:
+        c: An instance of the CDS API client.
+        dataset (str): The name of the dataset to download.
+        variable_list (list): A list of variable names to download.
+        year (str): The year for which to download the data.
+        month (str): The month for which to download the data.
+
+    Example:
+        >>> era5_get_data_single_level_st(cdsapi.Client(), "reanalysis-era5-single-levels", ["2m_temperature"], 2023, 2)
+        # Downloads ERA5 reanalysis data for 2m temperature for February 2023 (single-threaded version).
+    """
     try:
         output_directory = folder_utils.create_folder(
             country, data_folder, data_category, output_folder  # i is the data_year
