@@ -1,3 +1,6 @@
+# The function implementation below is a modification version from Tensorflow
+# Original code link: https://github.com/ashesh6810/DDWP-DA/blob/master/EnKF_DD_all_time.py
+
 import numpy as np
 import netCDF4 as nc
 import scipy.io as sio
@@ -47,6 +50,30 @@ print("length of initial condition", len(Z_rs[0, :]))
 
 
 def ENKF(x, n, P, Q, R, obs, model, u_ensemble):
+    """
+    Perform Ensemble Kalman Filter (EnKF) data assimilation.
+
+    Parameters:
+        x (ndarray): The state vector to be updated.
+        n (int): The size of the state vector.
+        P (ndarray): The covariance matrix of the state vector.
+        Q (ndarray): The process noise covariance matrix.
+        R (ndarray): The observation noise covariance matrix.
+        obs (ndarray): The observed data.
+        model: The predictive model used for forecasting.
+        u_ensemble (ndarray): An array to store the ensemble of forecasts.
+
+    Returns:
+        x_updated (ndarray): The updated state vector.
+        P_updated (ndarray): The updated covariance matrix.
+
+    This function performs the Ensemble Kalman Filter (EnKF) data assimilation to update
+    the state vector 'x' and its covariance matrix 'P' based on observations 'obs'.
+    The process noise covariance 'Q' and observation noise covariance 'R' are also used.
+    The predictive model 'model' is used for forecasting, and the ensemble of forecasts
+    is stored in 'u_ensemble'.
+    """
+
     obs = np.reshape(obs, [n, 1])
     x = np.reshape(x, [n, 1])
     [U, S, V] = np.linalg.svd(P)
@@ -80,35 +107,6 @@ def ENKF(x, n, P, Q, R, obs, model, u_ensemble):
     x = x_prior + np.dot(K, (obs - y_prior))
 
     return x, P
-
-
-import tensorflow
-import keras.backend as K
-
-# from data_manager import ClutteredMNIST
-# from visualizer import plot_mnist_sample
-# from visualizer import print_evaluation
-# from visualizer import plot_mnist_grid
-import netCDF4
-import numpy as np
-from keras.layers import (
-    Input,
-    Convolution2D,
-    Convolution1D,
-    MaxPooling2D,
-    Dense,
-    Dropout,
-    Flatten,
-    concatenate,
-    Activation,
-    Reshape,
-    UpSampling2D,
-    ZeroPadding2D,
-)
-import keras
-from keras.callbacks import History
-
-history = History()
 
 
 model = stn()
