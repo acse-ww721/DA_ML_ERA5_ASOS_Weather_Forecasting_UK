@@ -1,3 +1,6 @@
+# The function implementation below is a modification version from Tensorflow
+# Original code link: https://github.com/ashesh6810/DDWP-DA/blob/master/EnKF_DD_all_time.py
+
 import tensorflow
 import keras.backend as K
 
