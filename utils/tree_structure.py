@@ -42,6 +42,9 @@ if __name__ == "__main__":
         ".idea",
         ".ipynb_checkpoints",
         "script_",
+        "tests",
+        ".nc",
+        ".csv",
     ]
 
     generate_tree(
