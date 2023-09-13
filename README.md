@@ -8,13 +8,14 @@ Contents
 <!-- TOC -->
 
 1. [Introduction](#introduction)
-2. [Dependencies](#dependencies)
-3. [Data](#data)
-4. [Prediction Model](#prediction-model)
-5. [Assimilation](#assimilation)
-6. [Visualization](#visualization)
-7. [Contributors](#contributors)
-8. [License](#license)
+2. [Project Structure](#project-structure)
+3. [Dependencies](#dependencies)
+4. [Data](#data)
+5. [Prediction Model](#prediction-model)
+6. [Assimilation](#assimilation)
+7. [Visualization](#visualization)
+8. [Contributors](#contributors)
+9. [License](#license)
 
 <!-- TOC -->
 
@@ -32,6 +33,14 @@ investigate the assimilation effects, we assimilated the ASOS t2m data into the 
 that while the original global forecast model can be migrated to cater to local regions, using atmospheric data for data
 assimilation notably enhances model performance. However, assimilating surface temperature into atmospheric data
 counters this improvement, diminishing the model's predictive capabilities.
+
+Project Structure
+------------
+
+For a detailed overview of the project's directory structure, please refer to the `tree_structure.txt` file located in
+the `utils` directory. This file provides a comprehensive breakdown of the organization of files and directories within
+the project.
+
 
 Dependencies
 ------------
