@@ -1,6 +1,6 @@
-# Data Assimilation of ERA5 and ASOS with U-STN model for Weather Forecasting in the UK region
+## Data Assimilation of ERA5 and ASOS with U-STN model for Weather Forecasting in the UK region
 
-Author: Wenqi Wang
+### Author: Wenqi Wang
 
 Contents
 ---------------------
@@ -72,7 +72,7 @@ system:
 Data
 ------------
 
-# Data Sources
+### Data Sources
 
 This project relies on several primary data sources for its analysis:
 
@@ -93,18 +93,18 @@ This project relies on several primary data sources for its analysis:
      obtained from the Mesonet program and can be accessed for download.
    - Data source: [Mesonet ASOS Data](https://mesonet.agron.iastate.edu/request/download.phtml?network=GB__ASOS).
 
-## Data Collection
+### Data Collection
 
 The code available in the `src/data_collection` directory allows users to access, download, or crawl data from the
 corresponding websites. While the primary focus is on the UK region, the code is designed to be adaptable for use in
 other regions as well.
 
-## Data Preprocessing
+### Data Preprocessing
 
 In the `src/data_preprocessing` folder, you will find detailed information on the specific preprocessing steps applied
 to the data. These steps include handling missing data, interpolation, regridding, and data cleaning.
 
-## Accessing Data
+### Accessing Data
 
 You can access various data sets related to this project, including raw data, processed data for training models, and
 assimilated data, through the following Google Drive link:
@@ -115,21 +115,21 @@ assimilated data, through the following Google Drive link:
 Prediction Model
 ------------
 
-# Model Implementation
+### Model Implementation
 
 The code for the model is available in the `src/model` directory. The model is implemented using Python and relies on
 the Tensorflow library.
 
-## Training and Validation
+### Training and Validation
 
 The model undergoes training and validation using ERA5 T850 data spanning from 1979 to 2020. For validation purposes,
 ERA5 T850 data from the year 2021 is employed.
 
-## Testing
+### Testing
 
 The model's performance is rigorously evaluated through testing, utilizing ERA5 T850 data for the year 2022.
 
-## Predictive Functionality
+### Predictive Functionality
 
 Subsequently, the model is deployed to predict temperature values at ASOS stations and ERA5 data points for a time
 interval of 12 hours later.
@@ -138,17 +138,17 @@ interval of 12 hours later.
 Assimilation
 ------------
 
-# Data Assimilation Using SPEnKF
+### Data Assimilation Using SPEnKF
 
 For the assimilation of ASOS data, noisy model data, and virtual generated data into the ERA5 dataset, we employ the
 Sigma Point Ensemble Kalman Filter (SPEnKF) technique.
 
-## Implementation
+### Implementation
 
 The code responsible for the assimilation process can be found in the `src/assimilation` directory. This assimilation
 procedure is implemented using Python.
 
-## Inspirations
+### Inspirations
 
 Our assimilation methodology draws inspiration from the work of [@ashesh6810](https://github.com/ashesh6810/DDWP-DA).
 Their contributions have influenced the development of our assimilation approach.
