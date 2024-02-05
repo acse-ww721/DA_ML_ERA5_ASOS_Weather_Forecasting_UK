@@ -15,7 +15,8 @@ Contents
 6. [Assimilation](#assimilation)
 7. [Visualization](#visualization)
 8. [Contributors](#contributors)
-9. [License](#license)
+9. [Citation](#citation)
+10. [License](#license)
 
 <!-- TOC -->
 
@@ -34,6 +35,8 @@ that while the original global forecast model can be migrated to cater to local 
 assimilation notably enhances model performance. However, assimilating surface temperature into atmospheric data
 counters this improvement, diminishing the model's predictive capabilities.
 
+![Poster](./images/poster.png)
+
 Project Structure
 ------------
 
@@ -49,8 +52,7 @@ To establish the required environment for this project using Conda, follow these
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/acse-ww721/irp_ww721_bakcup.git
-   cd irp_ww721_bakcup
+   git clone https://github.com/acse-ww721/DA_ML_ERA5_ASOS_Weather_Forecasting_UK.git
 
 To set up the required environment for this project, please follow the instructions below based on your operating
 system:
@@ -58,11 +60,11 @@ system:
 1. Create a Conda virtual environment on Windows or Mac OS
 
    ```bash
-   conda env create -f environment_win.yml
+   conda env create -f config/env/env_win.yml
     ```
    or
     ```bash
-    conda env create -f environment_mac.yml
+    conda env create -f  config/env/env_mac.yml
      ```
 2. Activate the virtual environment:
    ```bash
@@ -71,11 +73,11 @@ system:
 3. Install the required packages based on your operating system:
 
    ```bash
-   pip install -r requirements_win.txt
+   pip install -r config/env/requirements_win.txt
    ```
    or
     ```bash
-       conda install --file requirements_mac.txt
+       conda install --file config/env/requirements_mac.txt
     ```
 
 Data
@@ -167,6 +169,21 @@ Visualization
 
 You can access all the code related to the visualization part in the `src/visualization` directory. The code is
 implemented using Python and relies on the Matplotlib library.
+
+Citation
+------------
+If you find this repository useful in your research, please consider citing the following paper:
+
+```bibtex
+  @inproceedings{wang2023data,
+  title={Data Assimilation using ERA5, ASOS, and the U-STN model for Weather Forecasting over the UK},
+  author={WANG, WENQI and Bieker, Jacob and Arcucci, Rossella and Quilodran-Casas, Cesar},
+  booktitle={NeurIPS 2023 Workshop on Tackling Climate Change with Machine Learning},
+  url={https://www.climatechange.ai/papers/neurips2023/61},
+  year={2023}
+}
+
+```
 
 Contributors
 ------------
