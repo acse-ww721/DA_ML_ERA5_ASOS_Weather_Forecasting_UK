@@ -193,4 +193,4 @@ For any inquiries or issues with the code, please don't hesitate to reach out to
 
 LICENSE
 ------------
-This project is licensed under the terms of the MIT license. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
